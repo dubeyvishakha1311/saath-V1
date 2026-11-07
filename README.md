@@ -1,4 +1,4 @@
-# Saath · 0.3.0
+# Saath · 0.3.1
 
 An Android-first, English/Hindi **internal-testing wellness prototype** based on the attached idea summary and [PRD.md](PRD.md). Not a clinically approved product, diagnostic tool, therapy service, or monitored crisis service.
 
@@ -53,7 +53,7 @@ cd android
 
 Output: `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-The GitHub Actions **Build Android APK** workflow performs tests, web/native sync and debug compilation on pushes to `arena/55e548ad-saath-v1`, or manual dispatch. Download the latest successful run's **Saath-0.3.0-debug-apk** artifact from [Actions](https://github.com/dubeyvishakha1311/saath-V1/actions). Artifacts are retained for 14 days.
+The GitHub Actions **Build Android APK** workflow performs tests, web/native sync and debug compilation on pushes to `arena/55e548ad-saath-v1`, or manual dispatch. Download the latest successful run's **Saath-0.3.1-debug-apk** artifact from [Actions](https://github.com/dubeyvishakha1311/saath-V1/actions). Artifacts are retained for 14 days.
 
 ### Install for internal testing
 
@@ -61,4 +61,8 @@ Extract the artifact ZIP and open `app-debug.apk` on Android 6.0+. Enable permis
 
 ### Validation
 
-24 automated DOM/domain tests cover original features, new flows, scoring and incomplete inputs, safety overrides, draft preservation, user-theme rejection, HTML escaping, navigation, and delete-all. Mobile Chromium smoke checks exercise Explore screens at 320/390/768px, story reflection, and PHQ-9 safety routing, with no horizontal overflow or uncaught page errors. These checks do not replace clinical validation, a security audit, accessibility testing, or physical Android installation/calling/back-button tests.
+25 automated DOM/domain tests cover original features, new flows, scoring and incomplete inputs, safety overrides, draft preservation, user-theme rejection, HTML escaping, navigation, and delete-all. Mobile Chromium smoke checks exercise Explore screens at 320/390/768px, story reflection, and PHQ-9 safety routing, with no horizontal overflow or uncaught page errors. These checks do not replace clinical validation, a security audit, accessibility testing, or physical Android installation/calling/back-button tests.
+
+## Navigation emphasis (0.3.1)
+
+Bottom tabs are ordered Today → Explore → **Calm** → Journal → My space. Calm uses a raised 60px circular icon with a larger touch area and remains visually prominent when inactive. Browser geometry checks at 320/390/768px confirm it is centered, larger than other tab icons, and opens the calming tools.

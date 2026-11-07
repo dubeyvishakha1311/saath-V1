@@ -423,3 +423,17 @@ test("all exercises are selectable and their optional notes can be saved", () =>
   assert.equal(a.data().experiences.length, 6);
   a.close();
 });
+
+test('Calm is the prominent middle tab and opens the panic tools', () => {
+  const a = app({consent:true,lang:'en',entries:[]});
+  const tabs = [...a.doc.querySelectorAll('nav .tab')];
+  assert.deepEqual(tabs.map(el=>el.dataset.action), ['home','explore','panic','journal','settings']);
+  assert.equal(tabs[2].classList.contains('calm-tab'), true);
+  tabs[2].click();
+  assert.equal(a.doc.querySelector('.app-shell').dataset.page, 'panic');
+  assert.equal(a.doc.querySelector('nav .calm-tab').getAttribute('aria-current'), 'page');
+  assert.ok(a.doc.querySelector('[data-action="breath"]'));
+  a.click('language');
+  assert.match(a.doc.querySelector('nav .calm-tab').textContent, /सुकून/);
+  a.close();
+});

@@ -1081,3 +1081,33 @@ nav .tab {
   overflow-wrap: anywhere;
   max-width: 155px;
 }
+
+/* Keep the one-tap calming tools at the centre of the primary navigation. */
+nav .calm-tab {
+  position: relative;
+  margin-top: -25px;
+  gap: 5px;
+  color: #425c3c;
+  font-size: 11px;
+  font-weight: 700;
+}
+nav .calm-tab .tab-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #425c3c;
+  color: #fff;
+  border: 5px solid #fafbf7;
+  box-shadow: 0 4px 12px #344d4026;
+}
+nav .calm-tab .tab-icon svg {
+  width: 28px;
+  height: 28px;
+}
+nav .calm-tab.active .tab-icon {
+  background: #314b2a;
+  box-shadow: 0 0 0 2px #aac19a, 0 4px 12px #344d4026;
+}
+nav .calm-tab:focus-visible {
+  border-radius: 18px;
+}

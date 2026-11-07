@@ -1,36 +1,48 @@
-# Saath
+# Saath · 0.3.0
 
-An Android-first, bilingual **internal-testing wellness prototype**, based on [PRD.md](PRD.md).
+An Android-first, English/Hindi **internal-testing wellness prototype** based on the attached idea summary and [PRD.md](PRD.md). Not a clinically approved product, diagnostic tool, therapy service, or monitored crisis service.
 
-## Included
+## Current features
 
-- English/Hindi onboarding and adult eligibility/consent notice
-- Seven completed-day journal with local drafts; missed days do not reset progress
-- Guided review of your own seven entries (not AI-generated analysis)
-- Optional breathing, grounding, and back-counting tools
-- Manually accessible crisis guidance and an optional trusted-contact dialler link
-- Delete-all data control
+- Mobile Today dashboard, optional local mood check-in, icon tabs, Back/Home/help controls and Android hardware-back integration.
+- **Explore:** original story and poem prompts, song title/artist/link plus reflection on the user's explanation only. No song playback, lyrics fetching, or song-content analysis.
+- Saved local reflections, draft recovery, tentative keyword-based themes with visible word evidence, and rejection of themes that do not fit.
+- Seven completed-day journal, weekly themes, user-selected positive moments, and optional small exercises. Missed days do not reset progress.
+- Six exercise types: CBT-informed perspective, small daily action, basic mindfulness, self-compassion, expressive writing, and ACT-style values prompts.
+- Optional conversational-style **English PHQ-9 / GAD-7** questionnaire flows, 0–3 scoring, non-diagnostic results, previous-question editing, discard/delete, and self-report limitations. No validated Hindi instrument translation is bundled.
+- Local safety-word routing for supported English/Hindi/Roman-Hindi phrases across submitted journal/story/song/poem/exercise text. **Incomplete and not clinically validated**: it can miss signals or produce false positives. Never assume a user is safe because it did not trigger.
+- PHQ-9 item 9 above zero immediately opens crisis support, independently of the total score or storage success. Ordinary results are suppressed for that response.
+- Offline breathing, 5–4–3–2–1 grounding, back-counting, medical-emergency warning, optional trusted contact, India emergency/Tele-MANAS dialler links, and professional-support guidance.
+- Local-only storage, no ads, no analytics, no account, and delete-all covering new drafts, reflections, screening answers, contact, and preferences.
+
+See [docs/FEATURE_COVERAGE.md](docs/FEATURE_COVERAGE.md) for the PDF-to-implementation map and remaining release gates.
 
 ## Important limitations
 
-**Not clinically reviewed. Not therapy, diagnosis, or an emergency service.** No crisis detection, screening, automatic notifications, verified helpline directory, remote AI, account, payments, or analytics. Do not use this prototype with sensitive real-world data or as a public mental-health release. The PRD release gates remain unfulfilled.
+**Do not launch publicly or use for urgent support.** Content, translations, reflection rules, screening implementation and crisis routing await clinical review. Keyword matching is not AI, sentiment understanding, clinical risk assessment, or guaranteed detection. Nobody monitors the app or receives alerts.
 
-Data is stored in app-local WebView storage, **without app-level encryption**. Android backup is disabled. Someone with access to the unlocked device/app may read entries. Uninstalling/clearing app storage may erase all data. The delete-all control clears this app's entries, drafts, contact, and preferences. Only one seven-day cycle is implemented. On-device dates determine progress; changing the device clock can affect it.
+Data is stored in app-local WebView storage **without app-level encryption**. Someone with access to the unlocked device/app may read it. Android backup is disabled; uninstalling/clearing app storage can erase everything. Delete-all clears app-owned local content and in-memory navigation; it does not control OS-level copies outside the app. Avoid sensitive real-world data on shared/test devices.
 
-## Web development
+External resources open only on user action. Dialler links require calling service and do not automatically place calls. India numbers were checked against official web listings on 7 November 2026, **not call-tested**. They are not a worldwide resource directory.
+
+No remote AI/provider, validated Hindi screening, therapist booking/provider directory, voice journaling, payment, subscription, institution dashboard, cloud sync, or additional journal cycles are implemented. Some of these are optional business ideas in the PDF rather than core app requirements. A production launch requires clinical, native-speaker, accessibility, device, security, privacy/legal, and operational review—not just a successful build.
+
+## Run and test
 
 Requires Node.js 22+.
 
 ```sh
 npm ci
 npm run dev
+npm test
+npm run build
 ```
 
-Vite serves on `0.0.0.0`; there are no backend requests or external asset/font dependencies.
+Vite binds to `0.0.0.0` and accepts Arena preview hosts. All core assets are bundled; there are no remote fonts or runtime model calls.
 
-## Build the APK locally
+## Build Android APK
 
-Requires Java 21 and Android SDK platform 35/build tools, or Android Studio configured with those dependencies.
+Requires Java 21 and Android SDK platform 35/build tools (or Android Studio configured with these).
 
 ```sh
 npm ci
@@ -41,30 +53,12 @@ cd android
 
 Output: `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-The GitHub Actions **Build Android APK** workflow performs the same build and uploads a `Saath-0.1.0-debug-apk` artifact. It runs on pushes to this session branch or manual dispatch.
+The GitHub Actions **Build Android APK** workflow performs tests, web/native sync and debug compilation on pushes to `arena/55e548ad-saath-v1`, or manual dispatch. Download the latest successful run's **Saath-0.3.0-debug-apk** artifact from [Actions](https://github.com/dubeyvishakha1311/saath-V1/actions). Artifacts are retained for 14 days.
 
 ### Install for internal testing
 
-Download/unzip the artifact and open the APK on an Android 6.0+ device. Android may require permission to install from the downloading app. Alternatively use `adb install -r app-debug.apk`. A debug-signed APK is for testing, not Google Play distribution. CI builds may use different debug keys, requiring uninstall before updating (which deletes local entries). A production release needs a private signing key and all clinical, security, privacy, resource-verification, and accessibility gates in the PRD.
+Extract the artifact ZIP and open `app-debug.apk` on Android 6.0+. Enable permission to install from that source if prompted, or use `adb install -r app-debug.apk`. CI debug signing keys may differ between builds; uninstall may be necessary before an update, deleting local data. This is not a signed production/Play Store release. Never share private signing credentials in the repository.
 
-## First successful APK build
+### Validation
 
-[Download the APK artifact](https://github.com/dubeyvishakha1311/saath-V1/actions/runs/42344303431/artifacts/13562902681) (GitHub sign-in may be required; retained for 14 days).
-
-[Successful build run](https://github.com/dubeyvishakha1311/saath-V1/actions/runs/42344303431), source commit `a2a02fa`. Four DOM-based functional tests and the Android debug compilation passed. Physical-device installation, Android dialler integration, accessibility, and clinical review have **not** been validated. To run the automated functional tests locally: `npm test`.
-
-## Mobile-app redesign (0.2.0)
-
-The refreshed UI uses a compact Today dashboard, persistent icon tab bar, touch-sized controls, local-only mood check-in, daily journal progress card, one-tap calming exercises, and a mobile-width app canvas on desktop. Journal, consent, crisis guidance, and deletion remain available. Mood check-ins are optional local preferences, not clinical scores or remote analytics; delete-all removes them too. Native Android system-bar colours match the app.
-
-Validation: six DOM functional tests pass. A Chromium smoke check at 390×844 covered onboarding, the Today dashboard, mood selection, and direct breathing-tool navigation with no horizontal overflow. Physical Android testing and clinical review are still outstanding. Version 0.2.0 supersedes the first-build APK linked above; use the latest successful **Build Android APK** workflow artifact.
-
-## Navigation update (0.2.1)
-
-- Back and Home controls appear on every screen alongside the existing language and Get help buttons. Back is disabled at the initial/root screen, where there is no previous view.
-- Back returns through actual screen/exercise history and restores the prior scroll position. Home clears that navigation stack and returns to Today (or Welcome before consent).
-- Android's system Back button uses the same in-app navigation through `@capacitor/app`; at the root it stays in the app. Use Android's Home gesture to leave.
-- Journal drafts and unsaved trusted-contact edits survive navigation. Cancel changes resets the contact field to its saved value. Existing save, stop, call and deletion actions remain available in their relevant screens.
-- Deleting all data clears navigation and temporary edits so Back cannot reopen deleted content. No journal/dashboard access is allowed before consent.
-
-Ten DOM-based tests cover core functionality and navigation. Native hardware-back integration requires physical-device testing.
+24 automated DOM/domain tests cover original features, new flows, scoring and incomplete inputs, safety overrides, draft preservation, user-theme rejection, HTML escaping, navigation, and delete-all. Mobile Chromium smoke checks exercise Explore screens at 320/390/768px, story reflection, and PHQ-9 safety routing, with no horizontal overflow or uncaught page errors. These checks do not replace clinical validation, a security audit, accessibility testing, or physical Android installation/calling/back-button tests.

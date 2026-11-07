@@ -58,3 +58,13 @@ Download/unzip the artifact and open the APK on an Android 6.0+ device. Android 
 The refreshed UI uses a compact Today dashboard, persistent icon tab bar, touch-sized controls, local-only mood check-in, daily journal progress card, one-tap calming exercises, and a mobile-width app canvas on desktop. Journal, consent, crisis guidance, and deletion remain available. Mood check-ins are optional local preferences, not clinical scores or remote analytics; delete-all removes them too. Native Android system-bar colours match the app.
 
 Validation: six DOM functional tests pass. A Chromium smoke check at 390×844 covered onboarding, the Today dashboard, mood selection, and direct breathing-tool navigation with no horizontal overflow. Physical Android testing and clinical review are still outstanding. Version 0.2.0 supersedes the first-build APK linked above; use the latest successful **Build Android APK** workflow artifact.
+
+## Navigation update (0.2.1)
+
+- Back and Home controls appear on every screen alongside the existing language and Get help buttons. Back is disabled at the initial/root screen, where there is no previous view.
+- Back returns through actual screen/exercise history and restores the prior scroll position. Home clears that navigation stack and returns to Today (or Welcome before consent).
+- Android's system Back button uses the same in-app navigation through `@capacitor/app`; at the root it stays in the app. Use Android's Home gesture to leave.
+- Journal drafts and unsaved trusted-contact edits survive navigation. Cancel changes resets the contact field to its saved value. Existing save, stop, call and deletion actions remain available in their relevant screens.
+- Deleting all data clears navigation and temporary edits so Back cannot reopen deleted content. No journal/dashboard access is allowed before consent.
+
+Ten DOM-based tests cover core functionality and navigation. Native hardware-back integration requires physical-device testing.

@@ -46,3 +46,9 @@ The GitHub Actions **Build Android APK** workflow performs the same build and up
 ### Install for internal testing
 
 Download/unzip the artifact and open the APK on an Android 6.0+ device. Android may require permission to install from the downloading app. Alternatively use `adb install -r app-debug.apk`. A debug-signed APK is for testing, not Google Play distribution. CI builds may use different debug keys, requiring uninstall before updating (which deletes local entries). A production release needs a private signing key and all clinical, security, privacy, resource-verification, and accessibility gates in the PRD.
+
+## First successful APK build
+
+[Download the APK artifact](https://github.com/dubeyvishakha1311/saath-V1/actions/runs/42344303431/artifacts/13562902681) (GitHub sign-in may be required; retained for 14 days).
+
+[Successful build run](https://github.com/dubeyvishakha1311/saath-V1/actions/runs/42344303431), source commit `a2a02fa`. Four DOM-based functional tests and the Android debug compilation passed. Physical-device installation, Android dialler integration, accessibility, and clinical review have **not** been validated. To run the automated functional tests locally: `npm test`.

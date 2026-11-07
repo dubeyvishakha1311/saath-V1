@@ -52,3 +52,9 @@ Download/unzip the artifact and open the APK on an Android 6.0+ device. Android 
 [Download the APK artifact](https://github.com/dubeyvishakha1311/saath-V1/actions/runs/42344303431/artifacts/13562902681) (GitHub sign-in may be required; retained for 14 days).
 
 [Successful build run](https://github.com/dubeyvishakha1311/saath-V1/actions/runs/42344303431), source commit `a2a02fa`. Four DOM-based functional tests and the Android debug compilation passed. Physical-device installation, Android dialler integration, accessibility, and clinical review have **not** been validated. To run the automated functional tests locally: `npm test`.
+
+## Mobile-app redesign (0.2.0)
+
+The refreshed UI uses a compact Today dashboard, persistent icon tab bar, touch-sized controls, local-only mood check-in, daily journal progress card, one-tap calming exercises, and a mobile-width app canvas on desktop. Journal, consent, crisis guidance, and deletion remain available. Mood check-ins are optional local preferences, not clinical scores or remote analytics; delete-all removes them too. Native Android system-bar colours match the app.
+
+Validation: six DOM functional tests pass. A Chromium smoke check at 390×844 covered onboarding, the Today dashboard, mood selection, and direct breathing-tool navigation with no horizontal overflow. Physical Android testing and clinical review are still outstanding. Version 0.2.0 supersedes the first-build APK linked above; use the latest successful **Build Android APK** workflow artifact.

@@ -1,4 +1,4 @@
-# Saath · 0.3.1
+# Saath · 0.4.0
 
 An Android-first, English/Hindi **internal-testing wellness prototype** based on the attached idea summary and [PRD.md](PRD.md). Not a clinically approved product, diagnostic tool, therapy service, or monitored crisis service.
 
@@ -53,7 +53,7 @@ cd android
 
 Output: `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-The GitHub Actions **Build Android APK** workflow performs tests, web/native sync and debug compilation on pushes to `arena/55e548ad-saath-v1`, or manual dispatch. Download the latest successful run's **Saath-0.3.1-debug-apk** artifact from [Actions](https://github.com/dubeyvishakha1311/saath-V1/actions). Artifacts are retained for 14 days.
+The GitHub Actions **Build Android APK** workflow performs tests, web/native sync and debug compilation on pushes to `arena/55e548ad-saath-v1`, or manual dispatch. Download the latest successful run's **Saath-0.4.0-debug-apk** artifact from [Actions](https://github.com/dubeyvishakha1311/saath-V1/actions). Artifacts are retained for 14 days.
 
 ### Install for internal testing
 
@@ -61,8 +61,20 @@ Extract the artifact ZIP and open `app-debug.apk` on Android 6.0+. Enable permis
 
 ### Validation
 
-25 automated DOM/domain tests cover original features, new flows, scoring and incomplete inputs, safety overrides, draft preservation, user-theme rejection, HTML escaping, navigation, and delete-all. Mobile Chromium smoke checks exercise Explore screens at 320/390/768px, story reflection, and PHQ-9 safety routing, with no horizontal overflow or uncaught page errors. These checks do not replace clinical validation, a security audit, accessibility testing, or physical Android installation/calling/back-button tests.
+28 automated DOM/domain tests cover original features, new flows, scoring and incomplete inputs, safety overrides, draft preservation, user-theme rejection, HTML escaping, navigation, and delete-all. Mobile Chromium smoke checks exercise Explore screens at 320/390/768px, story reflection, and PHQ-9 safety routing, with no horizontal overflow or uncaught page errors. These checks do not replace clinical validation, a security audit, accessibility testing, or physical Android installation/calling/back-button tests.
 
 ## Navigation emphasis (0.3.1)
 
 Bottom tabs are ordered Today → Explore → **Calm** → Journal → My space. Calm uses a raised 60px circular icon with a larger touch area and remains visually prominent when inactive. Browser geometry checks at 320/390/768px confirm it is centered, larger than other tab icons, and opens the calming tools.
+
+## UI/UX refinement (0.4.0)
+
+- Warm paper, ink, forest and restrained rust accents replace the multi-colour card grid. Serif reading headings are paired with system UI text; no remote font service is used.
+- Today has one clear journal action, neutral feeling buttons, visible seven-day progress, simple calming-tool rows and a secondary Explore entry.
+- Explore is an indexed reading list with distinct icons rather than identical coloured tiles. Story/poem content uses a readable reading surface; forms and screening use consistent input and selection controls.
+- Calm retains its raised, larger centre tab. Exercise choices use full-width rows; breathing text stays still while only the surrounding ring animates. Reduced-motion preferences disable that animation.
+- Mood buttons can be deselected with a second tap. Clear feedback explains how to clear a selection and where drafts are stored.
+- Local selections preserve keyboard focus; navigation and new questionnaire questions focus their headings. This is targeted accessibility work, not a claim of a complete accessibility audit.
+- Hindi glyphs are bundled offline with Noto Sans Devanagari 400/600 (SIL Open Font License; distributed at `public/licenses/NotoSansDevanagari-OFL.txt`). English screening item wording remains unchanged.
+
+Validation: 28 automated tests plus browser checks of 11 screens in English/Hindi at 320, 390 and 768px (66 combinations), mood toggling, question focus and reduced motion. No horizontal overflow or uncaught page errors in these checks. Physical Android and clinical review remain outstanding. See [UI design notes](docs/UI_DESIGN.md) for rationale and limits.

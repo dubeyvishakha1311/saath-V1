@@ -424,16 +424,92 @@ test("all exercises are selectable and their optional notes can be saved", () =>
   a.close();
 });
 
-test('Calm is the prominent middle tab and opens the panic tools', () => {
-  const a = app({consent:true,lang:'en',entries:[]});
-  const tabs = [...a.doc.querySelectorAll('nav .tab')];
-  assert.deepEqual(tabs.map(el=>el.dataset.action), ['home','explore','panic','journal','settings']);
-  assert.equal(tabs[2].classList.contains('calm-tab'), true);
+test("Calm is the prominent middle tab and opens the panic tools", () => {
+  const a = app({ consent: true, lang: "en", entries: [] });
+  const tabs = [...a.doc.querySelectorAll("nav .tab")];
+  assert.deepEqual(
+    tabs.map((el) => el.dataset.action),
+    ["home", "explore", "panic", "journal", "settings"],
+  );
+  assert.equal(tabs[2].classList.contains("calm-tab"), true);
   tabs[2].click();
-  assert.equal(a.doc.querySelector('.app-shell').dataset.page, 'panic');
-  assert.equal(a.doc.querySelector('nav .calm-tab').getAttribute('aria-current'), 'page');
+  assert.equal(a.doc.querySelector(".app-shell").dataset.page, "panic");
+  assert.equal(
+    a.doc.querySelector("nav .calm-tab").getAttribute("aria-current"),
+    "page",
+  );
   assert.ok(a.doc.querySelector('[data-action="breath"]'));
-  a.click('language');
-  assert.match(a.doc.querySelector('nav .calm-tab').textContent, /सुकून/);
+  a.click("language");
+  assert.match(a.doc.querySelector("nav .calm-tab").textContent, /सुकून/);
+  a.close();
+});
+
+test("tapping the same feeling clears it, persists the change, and permits reselection", () => {
+  const a = app({ consent: true, lang: "en", entries: [] });
+  a.click("mood-good");
+  assert.equal(a.data().mood.value, "good");
+  a.click("mood-good");
+  assert.equal(a.data().mood, undefined);
+  assert.equal(a.doc.querySelectorAll(".mood.selected").length, 0);
+  assert.equal(
+    a.doc
+      .querySelector('[data-action="mood-good"]')
+      .getAttribute("aria-pressed"),
+    "false",
+  );
+  assert.match(
+    a.doc.querySelector(".mood-note").textContent,
+    /No right or wrong way/,
+  );
+  a.click("journal");
+  a.click("home");
+  assert.equal(a.doc.querySelectorAll(".mood.selected").length, 0);
+  const reopened = app(a.data());
+  assert.equal(reopened.doc.querySelectorAll(".mood.selected").length, 0);
+  reopened.close();
+  a.click("mood-good");
+  assert.equal(a.data().mood.value, "good");
+  a.click("mood-low");
+  assert.equal(a.data().mood.value, "low");
+  assert.equal(a.doc.querySelectorAll(".mood.selected").length, 1);
+  a.click("language");
+  a.click("mood-low");
+  assert.equal(a.data().mood, undefined);
+  assert.equal(a.doc.querySelectorAll(".mood.selected").length, 0);
+  a.close();
+});
+
+test("failed mood deselection restores the prior selection", () => {
+  const a = app({ consent: true, lang: "en", entries: [] });
+  a.click("mood-good");
+  a.w.alert = () => {};
+  a.w.Storage.prototype.setItem = () => {
+    throw new Error("Storage unavailable");
+  };
+  a.click("mood-good");
+  assert.equal(
+    a.doc
+      .querySelector('[data-action="mood-good"]')
+      .getAttribute("aria-pressed"),
+    "true",
+  );
+  assert.equal(a.data().mood.value, "good");
+  a.close();
+});
+
+test("selection updates keep keyboard focus; navigation focuses the new screen heading", () => {
+  const a = app({ consent: true, lang: "en", entries: [] });
+  a.doc.querySelector('[data-action="mood-good"]').focus();
+  a.click("mood-good");
+  assert.equal(a.doc.activeElement.dataset.action, "mood-good");
+  a.click("mood-good");
+  assert.equal(a.doc.activeElement.dataset.action, "mood-good");
+  assert.equal(a.doc.activeElement.getAttribute("aria-pressed"), "false");
+  a.click("journal");
+  assert.equal(a.doc.activeElement, a.doc.querySelector("main h1"));
+  assert.match(
+    a.doc.querySelector("#status").textContent,
+    /Only stored on this device/,
+  );
   a.close();
 });

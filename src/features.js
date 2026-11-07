@@ -242,7 +242,7 @@ function warning(c) {
   return `<p class="notice">${c.t("Prototype content, not clinically reviewed. Reflections are simple local word matches, not AI, diagnosis, or an assessment. They can be wrong. You may reject them.", "प्रोटोटाइप सामग्री; क्लिनिकल समीक्षा नहीं हुई। चिंतन केवल स्थानीय शब्द-मिलान है, AI, निदान या मूल्यांकन नहीं। यह गलत हो सकता है। आप इसे अस्वीकार कर सकते हैं।")}</p>`;
 }
 function draft(c, key, placeholder = "") {
-  return `<label for="response">${c.t("Your words", "आपके शब्द")}</label><textarea id="response" maxlength="12000" data-feature-draft="${key}" placeholder="${c.escape(placeholder)}">${c.escape(c.state.featureDrafts?.[key] || "")}</textarea><p id="feature-status" role="status"></p>`;
+  return `<label for="response">${c.t("Your words", "आपके शब्द")}</label><textarea id="response" maxlength="12000" data-feature-draft="${key}" placeholder="${c.escape(placeholder)}">${c.escape(c.state.featureDrafts?.[key] || "")}</textarea><p id="feature-status" class="status" role="status">${c.state.featureDrafts?.[key] ? c.t("Draft saved on this device.", "ड्राफ़्ट इस डिवाइस पर सेव है।") : c.t("Only saved on this device.", "केवल इस डिवाइस पर सेव होगा।")}</p>`;
 }
 function safetyCard(c) {
   return `<div class="card"><h2>${c.t("Let’s put support first", "पहले सहायता पर ध्यान दें")}</h2><p>${c.t("Some words may relate to safety. This may be a mistaken match; normal reflection is paused. Saath is not monitored and cannot determine whether you are safe.", "कुछ शब्द सुरक्षा से जुड़े हो सकते हैं। मिलान गलत हो सकता है; सामान्य चिंतन रोक दिया गया है। साथ की निगरानी नहीं होती और यह आपकी सुरक्षा तय नहीं कर सकता।")}</p>${c.button(c.t("Open support now", "अभी सहायता खोलें"), "crisis", "help")}</div>`;
@@ -267,7 +267,7 @@ export function renderExtra(page, c) {
   if (page === "professional")
     return `<h1>${t("Support beyond this app", "इस ऐप से आगे की सहायता")}</h1><p>${t("If feelings persist, affect daily life, or feel difficult to manage, consider a qualified clinical psychologist, psychiatrist, or other appropriate professional. Saath does not provide diagnosis, treatment, or medication advice.", "अगर भावनाएँ बनी रहें, रोज़मर्रा पर असर डालें या संभालना मुश्किल हो, योग्य क्लिनिकल मनोवैज्ञानिक, मनोचिकित्सक या उपयुक्त पेशेवर से बात करें। साथ निदान, उपचार या दवा की सलाह नहीं देता।")}</p><div class="card"><h2>${t("Your choice, no referral fee", "आपकी पसंद, कोई रेफ़रल शुल्क नहीं")}</h2><p>${t("This prototype has no therapist booking service or verified provider directory. Ask about credentials, confidentiality, fees and emergency arrangements before choosing care. No journal entries or screening answers are shared by this app.", "इस प्रोटोटाइप में थेरेपिस्ट बुकिंग या सत्यापित पेशेवर सूची नहीं है। सहायता चुनने से पहले योग्यता, गोपनीयता, शुल्क और आपात व्यवस्था पूछें। यह ऐप डायरी या स्क्रीनिंग उत्तर साझा नहीं करता।")}</p><a class="primary call-button" href="tel:14416">${t("India · Tele-MANAS · 14416", "भारत · टेली-मानस · 14416")}</a><small>${t("Government mental-health support contact. Official listing checked 7 Nov 2026; not call-tested.", "सरकारी मानसिक स्वास्थ्य सहायता संपर्क। आधिकारिक सूची 7 नवम्बर 2026 को जाँची; कॉल-परीक्षण नहीं।")}</small></div>${b(t("Urgent help", "तुरंत सहायता"), "crisis", "help")}`;
   if (page === "explore")
-    return `<h1>${t("Start with what feels easy.", "जो आसान लगे, वहीं से शुरू करें।")}</h1><p class="muted">${t("A story, a song, a few words. There’s no right way in.", "एक कहानी, एक गीत, कुछ शब्द। कोई एक सही तरीका नहीं।")}</p><div class="feature-grid">${[
+    return `<h1>${t("Find a starting point.", "शुरू करने का तरीका चुनें।")}</h1><p class="muted">${t("You don’t have to start by talking about yourself.", "शुरुआत अपने बारे में बताने से करना ज़रूरी नहीं।")}</p><div class="feature-grid">${[
       [
         "story",
         "Story",
@@ -312,8 +312,8 @@ export function renderExtra(page, c) {
       ],
     ]
       .map(
-        ([id, en, hi, desc, dh]) =>
-          `<button class="feature-tile" data-action="${id}"><span>${c.icon(id === "song" ? "heart" : id === "screening" ? "settings" : "journal")}</span><strong>${t(en, hi)}</strong><small>${t(desc, dh)}</small></button>`,
+        ([id, en, hi, desc, dh], index) =>
+          `<button class="feature-tile" data-action="${id}"><span class="feature-icon">${c.icon(id)}</span><span class="feature-copy"><span class="feature-number">${String(index + 1).padStart(2, "0")}</span><strong>${t(en, hi)}</strong><small>${t(desc, dh)}</small></span><span class="feature-arrow">${c.icon("arrow")}</span></button>`,
       )
       .join(
         "",

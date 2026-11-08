@@ -1,4 +1,4 @@
-# Saath · 0.4.0
+# Saath · 0.5.0
 
 An Android-first, English/Hindi **internal-testing wellness prototype** based on the attached idea summary and [PRD.md](PRD.md). Not a clinically approved product, diagnostic tool, therapy service, or monitored crisis service.
 
@@ -13,7 +13,7 @@ An Android-first, English/Hindi **internal-testing wellness prototype** based on
 - Local safety-word routing for supported English/Hindi/Roman-Hindi phrases across submitted journal/story/song/poem/exercise text. **Incomplete and not clinically validated**: it can miss signals or produce false positives. Never assume a user is safe because it did not trigger.
 - PHQ-9 item 9 above zero immediately opens crisis support, independently of the total score or storage success. Ordinary results are suppressed for that response.
 - Offline breathing, 5–4–3–2–1 grounding, back-counting, medical-emergency warning, optional trusted contact, India emergency/Tele-MANAS dialler links, and professional-support guidance.
-- Local-only storage, no ads, no analytics, no account, and delete-all covering new drafts, reflections, screening answers, contact, and preferences.
+- Optional Supabase email/password accounts, separate guest/account notebooks, explicit encrypted cloud backup/restore and account/data deletion. No automatic upload, ads, analytics or remote AI. Guest writing and Calm do not require login.
 
 See [docs/FEATURE_COVERAGE.md](docs/FEATURE_COVERAGE.md) for the PDF-to-implementation map and remaining release gates.
 
@@ -21,11 +21,17 @@ See [docs/FEATURE_COVERAGE.md](docs/FEATURE_COVERAGE.md) for the PDF-to-implemen
 
 **Do not launch publicly or use for urgent support.** Content, translations, reflection rules, screening implementation and crisis routing await clinical review. Keyword matching is not AI, sentiment understanding, clinical risk assessment, or guaranteed detection. Nobody monitors the app or receives alerts.
 
-Data is stored in app-local WebView storage **without app-level encryption**. Someone with access to the unlocked device/app may read it. Android backup is disabled; uninstalling/clearing app storage can erase everything. Delete-all clears app-owned local content and in-memory navigation; it does not control OS-level copies outside the app. Avoid sensitive real-world data on shared/test devices.
+Data is stored in app-local WebView storage **without app-level encryption**. Someone with access to the unlocked device/app may read it. Android backup is disabled; uninstalling/clearing app storage can erase everything. Guest deletion clears app-owned local content and in-memory navigation. Signed-in deletion also removes the cloud backup; account deletion is separate. Neither remotely wipes other offline devices or provider/OS-level copies. Avoid sensitive real-world data on shared/test devices.
 
 External resources open only on user action. Dialler links require calling service and do not automatically place calls. India numbers were checked against official web listings on 7 November 2026, **not call-tested**. They are not a worldwide resource directory.
 
 No remote AI/provider, validated Hindi screening, therapist booking/provider directory, voice journaling, payment, subscription, institution dashboard, cloud sync, or additional journal cycles are implemented. Some of these are optional business ideas in the PDF rather than core app requirements. A production launch requires clinical, native-speaker, accessibility, device, security, privacy/legal, and operational review—not just a successful build.
+
+## Accounts and Supabase (0.5.0)
+
+Connected to your **saath** Supabase project. Sign in/create account is available from welcome and My space. Account & backup has manual upload/restore with a separate passphrase; writing is never silently uploaded. Back/Home/help/language controls and the prominent middle Calm tab are preserved.
+
+**Email delivery still needs custom SMTP in Supabase.** Verification remains enabled; the default sender is restricted to organization-member addresses. Public signup/reset delivery, real email/native-link end-to-end tests and secure on-device token storage are not production-ready. See [Supabase setup, privacy and remaining owner steps](docs/SUPABASE.md).
 
 ## Run and test
 
@@ -53,7 +59,7 @@ cd android
 
 Output: `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-The GitHub Actions **Build Android APK** workflow performs tests, web/native sync and debug compilation on pushes to `arena/55e548ad-saath-v1`, or manual dispatch. Download the latest successful run's **Saath-0.4.0-debug-apk** artifact from [Actions](https://github.com/dubeyvishakha1311/saath-V1/actions). Artifacts are retained for 14 days.
+The GitHub Actions **Build Android APK** workflow performs tests, web/native sync and debug compilation on pushes to `arena/55e548ad-saath-v1`, or manual dispatch. Download the latest successful run's **Saath-0.5.0-debug-apk** artifact from [Actions](https://github.com/dubeyvishakha1311/saath-V1/actions). Artifacts are retained for 14 days.
 
 ### Install for internal testing
 
@@ -61,7 +67,7 @@ Extract the artifact ZIP and open `app-debug.apk` on Android 6.0+. Enable permis
 
 ### Validation
 
-28 automated DOM/domain tests cover original features, new flows, scoring and incomplete inputs, safety overrides, draft preservation, user-theme rejection, HTML escaping, navigation, and delete-all. Mobile Chromium smoke checks exercise Explore screens at 320/390/768px, story reflection, and PHQ-9 safety routing, with no horizontal overflow or uncaught page errors. These checks do not replace clinical validation, a security audit, accessibility testing, or physical Android installation/calling/back-button tests.
+39 automated tests cover account isolation, explicit backup consent, authenticated deletion, session races, cryptography/tamper rejection, original features, scoring and incomplete inputs, safety overrides, draft preservation, user-theme rejection, HTML escaping, navigation, and delete-all. Mobile Chromium smoke checks exercise Explore screens at 320/390/768px, story reflection, and PHQ-9 safety routing, with no horizontal overflow or uncaught page errors. These checks do not replace clinical validation, a security audit, accessibility testing, or physical Android installation/calling/back-button tests.
 
 ## Navigation emphasis (0.3.1)
 

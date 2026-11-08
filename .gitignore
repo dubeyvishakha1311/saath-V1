@@ -4,3 +4,6 @@ dist/
 android/.gradle/
 android/**/build/
 android/local.properties
+.env
+.env.*
+!.env.example

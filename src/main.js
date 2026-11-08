@@ -8,8 +8,12 @@ import {
   riskSignal,
   weeklyThemes,
 } from "./features.js";
+import { createAccountController, accountPages } from "./account.js";
+import { supabase, authRedirectURL, listenForNativeAuth } from "./supabase.js";
 const root = document.querySelector("#app");
-const KEY = "saath-prototype-v1";
+const GUEST_KEY = "saath-prototype-v1";
+let KEY = GUEST_KEY;
+let notebookOwner = null;
 let state;
 try {
   state = JSON.parse(localStorage.getItem(KEY)) || {};
@@ -61,7 +65,7 @@ let contactDraft;
 function navigate(p, nextTool = "", { replace = false } = {}) {
   if (
     !state.consent &&
-    !["welcome", "panic", "crisis", "professional"].includes(p)
+    !["welcome", "panic", "crisis", "professional", ...accountPages].includes(p)
   )
     p = "welcome";
   if (page === p && tool === nextTool) return;
@@ -81,7 +85,9 @@ function goBack() {
   tool = previous.tool;
   if (
     !state.consent &&
-    !["welcome", "panic", "crisis", "professional"].includes(page)
+    !["welcome", "panic", "crisis", "professional", ...accountPages].includes(
+      page,
+    )
   ) {
     page = "welcome";
     tool = "";
@@ -91,7 +97,7 @@ function goBack() {
 }
 window.addEventListener("saath:back", goBack);
 function screenControls() {
-  return `<div class="screen-controls" role="group" aria-label="${t("Screen navigation", "स्क्रीन नेविगेशन")}"><button class="back-button" data-action="back" ${navigationStack.length ? "" : "disabled"}>${icon("back")}<span>${t("Back", "वापस")}</span></button><span class="screen-title">${t({ home: "TODAY", welcome: "WELCOME", journal: "JOURNAL", panic: tool ? "EXERCISE" : "CALM SPACE", settings: "MY SPACE", reflection: "MY WEEK", crisis: "SUPPORT", explore: "EXPLORE", story: "STORY", song: "SONG", poem: "POEM", experience: "REFLECTION", library: "EXERCISES", exercise: "SMALL STEP", screening: "CHECK-IN", questionnaire: "CHECK-IN", "screen-result": "CHECK-IN", history: "SAVED", professional: "PROFESSIONAL HELP" }[page], { home: "आज", welcome: "स्वागत", journal: "डायरी", panic: tool ? "अभ्यास" : "सुकून", settings: "मेरी जगह", reflection: "मेरा सप्ताह", crisis: "सहायता", explore: "आज़माएँ", story: "कहानी", song: "गीत", poem: "कविता", experience: "चिंतन", library: "अभ्यास", exercise: "छोटा कदम", screening: "जाँच", questionnaire: "जाँच", "screen-result": "जाँच", history: "सेव किया", professional: "पेशेवर सहायता" }[page])}</span>${button(icon("home") + `<span>${t("Home", "होम")}</span>`, "home-root", "home-button")}</div>`;
+  return `<div class="screen-controls" role="group" aria-label="${t("Screen navigation", "स्क्रीन नेविगेशन")}"><button class="back-button" data-action="back" ${navigationStack.length ? "" : "disabled"}>${icon("back")}<span>${t("Back", "वापस")}</span></button><span class="screen-title">${t({ home: "TODAY", welcome: "WELCOME", journal: "JOURNAL", panic: tool ? "EXERCISE" : "CALM SPACE", settings: "MY SPACE", reflection: "MY WEEK", crisis: "SUPPORT", explore: "EXPLORE", story: "STORY", song: "SONG", poem: "POEM", experience: "REFLECTION", library: "EXERCISES", exercise: "SMALL STEP", screening: "CHECK-IN", questionnaire: "CHECK-IN", "screen-result": "CHECK-IN", history: "SAVED", professional: "PROFESSIONAL HELP", login: "SIGN IN", signup: "CREATE ACCOUNT", "forgot-password": "PASSWORD HELP", "reset-password": "NEW PASSWORD", account: "ACCOUNT", cloud: "CLOUD BACKUP" }[page], { home: "आज", welcome: "स्वागत", journal: "डायरी", panic: tool ? "अभ्यास" : "सुकून", settings: "मेरी जगह", reflection: "मेरा सप्ताह", crisis: "सहायता", explore: "आज़माएँ", story: "कहानी", song: "गीत", poem: "कविता", experience: "चिंतन", library: "अभ्यास", exercise: "छोटा कदम", screening: "जाँच", questionnaire: "जाँच", "screen-result": "जाँच", history: "सेव किया", professional: "पेशेवर सहायता", login: "साइन इन", signup: "खाता बनाएँ", "forgot-password": "पासवर्ड सहायता", "reset-password": "नया पासवर्ड", account: "खाता", cloud: "क्लाउड बैकअप" }[page])}</span>${button(icon("home") + `<span>${t("Home", "होम")}</span>`, "home-root", "home-button")}</div>`;
 }
 function button(label, action, cls = "") {
   return `<button class="${cls}" data-action="${action}">${label}</button>`;
@@ -152,7 +158,7 @@ function render() {
   const previousHeading = root.querySelector("main h1")?.textContent;
   clearInterval(timer);
   document.documentElement.lang = state.lang;
-  root.innerHTML = `<div class="app-shell" data-page="${page}"><header class="app-bar"><div class="app-identity"><span class="brand">saath<span>.</span></span><span class="brand-caption">${t("a personal notebook", "आपकी अपनी डायरी")}</span></div><div class="header-actions">${button(hi() ? "English" : "हिन्दी", "language", "language-button")}${button(icon("heart") + `<span>${t("Get help", "मदद")}</span>`, "crisis", "help")}</div></header><main class="wrap" id="screen">${screenControls()}${content()}</main>${
+  root.innerHTML = `<div class="app-shell" data-page="${page}"><header class="app-bar"><div class="app-identity"><span class="brand">saath<span>.</span></span><span class="brand-caption">${t("a personal notebook", "आपकी अपनी डायरी")}</span></div><div class="header-actions">${button(hi() ? "English" : "हिन्दी", "language", "language-button")}${button(icon("heart") + `<span>${t("Get help", "मदद")}</span>`, "crisis", "help")}</div></header><main class="wrap" id="screen">${screenControls()}<p id="global-status" role="status" class="global-status"></p>${content()}</main>${
     state.consent
       ? `<nav aria-label="${t("Main navigation", "मुख्य नेविगेशन")}">${[
           ["home", t("Today", "आज")],
@@ -189,6 +195,7 @@ function render() {
       heading.focus({ preventScroll: true });
     }
   }
+  account.bind();
   bindExtra(root, featureContext());
   if (page === "settings") {
     root.querySelector("#phone")?.addEventListener("input", (event) => {
@@ -245,6 +252,7 @@ function renderHome() {
   <button class="explore-entry" data-action="explore"><span><strong>${t("Start somewhere else", "कहीं और से शुरू करें")}</strong><small>${t("A story, a song or an unfinished poem.", "एक कहानी, एक गीत या अधूरी कविता।")}</small></span>${icon("arrow")}</button><p class="prototype-label">${t("Self-reflection, not treatment. Internal testing prototype.", "आत्म-चिंतन, उपचार नहीं। आंतरिक परीक्षण प्रोटोटाइप।")}</p>`;
 }
 function content() {
+  if (accountPages.includes(page)) return account.renderPage(page);
   if (extraPages.includes(page)) return renderExtra(page, featureContext());
   if (
     page === "reflection" &&
@@ -254,7 +262,7 @@ function content() {
     return weeklyThemes(featureContext());
   switch (page) {
     case "welcome":
-      return `<div class="welcome-art" aria-hidden="true"><span class="notebook-mark">${icon("journal")}</span><span class="edition-label">SAATH / 01</span></div><div class="eyebrow">${t("YOUR PERSONAL NOTEBOOK", "आपकी अपनी डायरी")}</div><h1>${t("Some days are easier<br>to write about.", "कुछ दिन लिखकर<br>समझ आते हैं।")}</h1><p>${t("A notebook for whatever is on your mind. Start with a few words, or try a story, song or poem.", "मन में जो है, उसके लिए एक डायरी। कुछ शब्द लिखें, या कहानी, गीत और कविता से शुरुआत करें।")}</p><div class="card"><h2>${t("Before we begin", "शुरू करने से पहले")}</h2><p>${t("This is an early wellness prototype for adults 18+. It is not therapy, diagnosis, medical advice, or a monitored crisis service.", "यह 18+ वयस्कों के लिए शुरुआती वेलनेस प्रोटोटाइप है। यह थेरेपी, निदान, चिकित्सा सलाह या निगरानी वाली संकट सेवा नहीं है।")}</p><p class="notice">${t("Your writing stays in this app on this device. This prototype does not provide app-level encrypted storage. Anyone with device/app access may read it. Do not enter sensitive details on a shared device. No AI, account, ads, analytics, or network processing. Clearing app data or uninstalling may erase your journal.", "आपकी लिखावट इसी डिवाइस के ऐप में रहती है। इस प्रोटोटाइप में ऐप-स्तर एन्क्रिप्शन नहीं है। डिवाइस/ऐप तक पहुँच वाला व्यक्ति इसे पढ़ सकता है। साझा डिवाइस पर संवेदनशील बातें न लिखें। AI, खाता, विज्ञापन, एनालिटिक्स या नेटवर्क प्रोसेसिंग नहीं है। ऐप हटाने या डेटा साफ़ करने से डायरी मिट सकती है।")}</p>${button(t("I’m 18+ and agree to local storage", "मैं 18+ हूँ और स्थानीय स्टोरेज से सहमत हूँ"), "consent", "primary")}</div>`;
+      return `<div class="welcome-art" aria-hidden="true"><span class="notebook-mark">${icon("journal")}</span><span class="edition-label">SAATH / 01</span></div><div class="eyebrow">${t("YOUR PERSONAL NOTEBOOK", "आपकी अपनी डायरी")}</div><h1>${t("Some days are easier<br>to write about.", "कुछ दिन लिखकर<br>समझ आते हैं।")}</h1><p>${t("A notebook for whatever is on your mind. Start with a few words, or try a story, song or poem.", "मन में जो है, उसके लिए एक डायरी। कुछ शब्द लिखें, या कहानी, गीत और कविता से शुरुआत करें।")}</p><div class="card"><h2>${t("Before we begin", "शुरू करने से पहले")}</h2><p>${t("This is an early wellness prototype for adults 18+. It is not therapy, diagnosis, medical advice, or a monitored crisis service.", "यह 18+ वयस्कों के लिए शुरुआती वेलनेस प्रोटोटाइप है। यह थेरेपी, निदान, चिकित्सा सलाह या निगरानी वाली संकट सेवा नहीं है।")}</p><p class="notice">${t("Your writing stays in this app on this device. This prototype does not provide app-level encrypted storage. Anyone with device/app access may read it. Do not enter sensitive details on a shared device. No ads or analytics. An optional account sends authentication requests to Supabase; notebook data is uploaded only through the separate encrypted-backup flow. Clearing app data or uninstalling may erase your journal.", "आपकी लिखावट इसी डिवाइस के ऐप में रहती है। इस प्रोटोटाइप में ऐप-स्तर एन्क्रिप्शन नहीं है। डिवाइस/ऐप तक पहुँच वाला व्यक्ति इसे पढ़ सकता है। साझा डिवाइस पर संवेदनशील बातें न लिखें। विज्ञापन या एनालिटिक्स नहीं हैं। वैकल्पिक खाता Supabase को प्रमाणीकरण अनुरोध भेजता है; डायरी केवल अलग एन्क्रिप्टेड बैकअप विकल्प से अपलोड होती है। ऐप हटाने या डेटा साफ़ करने से डायरी मिट सकती है।")}</p>${button(t("I’m 18+ and agree to local storage", "मैं 18+ हूँ और स्थानीय स्टोरेज से सहमत हूँ"), "consent", "primary")}</div>${account.intro()}`;
     case "home":
       return renderHome();
     case "journal": {
@@ -275,7 +283,7 @@ function content() {
     case "crisis":
       return `<div class="eyebrow">${t("Support right now", "अभी सहायता")}</div><h1>${t("Your safety matters.", "आपकी सुरक्षा ज़रूरी है।")}</h1><p>${t("If you may hurt yourself, someone else, or cannot stay safe, contact local emergency services or go to the nearest emergency department. If possible, move near someone you trust and away from things you could use to harm yourself.", "अगर आप खुद को या किसी और को नुकसान पहुँचा सकते हैं, या सुरक्षित नहीं रह सकते, स्थानीय आपात सेवा से संपर्क करें या नज़दीकी आपात विभाग जाएँ। संभव हो तो किसी भरोसेमंद व्यक्ति के पास जाएँ और नुकसान पहुँचाने वाली चीज़ों से दूर रहें।")}</p><div class="card"><h2>${t("Ask someone to stay with you", "किसी को अपने साथ रहने को कहें")}</h2>${contactLink()}<p>${t("In India: 112 for emergency assistance; Tele-MANAS 14416 for mental-health support. Outside India, use your local emergency service. Calls require phone service and are never placed automatically.", "भारत में: आपात सहायता के लिए 112; मानसिक स्वास्थ्य सहायता के लिए टेली-मानस 14416। भारत के बाहर स्थानीय आपात सेवा का उपयोग करें। कॉल के लिए फ़ोन सेवा चाहिए; कॉल अपने आप नहीं लगती।")}</p><div class="resource-links"><a class="danger call-button" href="tel:112">${t("Call emergency · 112", "आपात कॉल · 112")}</a><a class="primary call-button" href="tel:14416">${t("Call Tele-MANAS · 14416", "टेली-मानस · 14416")}</a></div><small>${t("India · official web listings checked 7 Nov 2026, not call-tested. Availability may vary.", "भारत · आधिकारिक वेब सूची 7 नवम्बर 2026 को जाँची; कॉल-परीक्षण नहीं। उपलब्धता बदल सकती है।")}</small><p><a href="https://112.gov.in/about" target="_blank" rel="noopener noreferrer">112 · official source</a> · <a href="https://dghs.mohfw.gov.in/national-mental-health-programme.php" target="_blank" rel="noopener noreferrer">Tele-MANAS · official source</a></p></div><p class="notice">${t("Saath is not monitored, cannot contact responders, and cannot reliably detect crises. Local word matching can miss signals or get them wrong. Nobody has been notified. Do not wait for a reply from this app.", "साथ की निगरानी नहीं होती, यह सहायता सेवाओं से संपर्क या भरोसेमंद संकट पहचान नहीं कर सकता। स्थानीय शब्द-मिलान संकेत चूक या गलत समझ सकता है। किसी को सूचित नहीं किया गया है। इस ऐप के जवाब का इंतज़ार न करें।")}</p>${button(t("Back to calming tools", "शांत होने के अभ्यास"), "panic", "quiet")}`;
     case "settings":
-      return `<h1>${t("Make yourself<br>at home.", "अपनी जगह,<br>अपने तरीके से।")}</h1><div class="card"><h2>${t("Trusted person", "भरोसेमंद व्यक्ति")}</h2><p>${t("Optional. Add a number without sharing your contacts. Tapping Call opens your dialler; you decide whether to call.", "वैकल्पिक। कॉन्टैक्ट साझा किए बिना नंबर जोड़ें। कॉल दबाने से डायलर खुलता है; कॉल करना आप तय करते हैं।")}</p><label for="phone">${t("Phone number", "फ़ोन नंबर")}</label><input id="phone" type="tel" maxlength="20" value="${escape(contactDraft ?? state.phone ?? "")}" autocomplete="off">${button(t("Save contact", "नंबर सेव करें"), "contact", "primary")} ${button(t("Cancel changes", "बदलाव रद्द करें"), "cancel-contact", "quiet")}<p id="status" role="status"></p></div><div class="card"><h2>${t("Privacy & prototype limits", "गोपनीयता और सीमाएँ")}</h2><p>${t("Stored only on this device in app-local web storage, without app-level encryption. No account, AI, analytics, ads, or server. Device backups depend on your operating system. This prototype disables Android app backup.", "डेटा केवल इसी डिवाइस के ऐप वेब स्टोरेज में है, ऐप-स्तर एन्क्रिप्शन के बिना। खाता, AI, एनालिटिक्स, विज्ञापन या सर्वर नहीं है। डिवाइस बैकअप ऑपरेटिंग सिस्टम पर निर्भर है। इस प्रोटोटाइप में Android ऐप बैकअप बंद है।")}</p><p>${t("Not clinically reviewed. Local safety word matching is incomplete, and optional English screening is not a diagnosis. No cloud sync, remote AI, or new journal cycles. Do not rely on this prototype for urgent support.", "क्लिनिकल समीक्षा नहीं हुई है। स्थानीय सुरक्षा शब्द-मिलान अधूरा है; वैकल्पिक अंग्रेज़ी स्क्रीनिंग निदान नहीं है। क्लाउड सिंक, रिमोट AI या नए डायरी चक्र नहीं हैं। तुरंत सहायता के लिए इस प्रोटोटाइप पर निर्भर न रहें।")}</p>${button(t("Delete all my data", "मेरा सारा डेटा मिटाएँ"), "delete", "danger")}</div><small>Saath 0.4.0 · ${t("Internal testing prototype · 18+", "आंतरिक परीक्षण प्रोटोटाइप · 18+")}</small>`;
+      return `<h1>${t("Make yourself<br>at home.", "अपनी जगह,<br>अपने तरीके से।")}</h1>${account.settingsCard()}<div class="card"><h2>${t("Trusted person", "भरोसेमंद व्यक्ति")}</h2><p>${t("Optional. Add a number without sharing your contacts. Tapping Call opens your dialler; you decide whether to call.", "वैकल्पिक। कॉन्टैक्ट साझा किए बिना नंबर जोड़ें। कॉल दबाने से डायलर खुलता है; कॉल करना आप तय करते हैं।")}</p><label for="phone">${t("Phone number", "फ़ोन नंबर")}</label><input id="phone" type="tel" maxlength="20" value="${escape(contactDraft ?? state.phone ?? "")}" autocomplete="off">${button(t("Save contact", "नंबर सेव करें"), "contact", "primary")} ${button(t("Cancel changes", "बदलाव रद्द करें"), "cancel-contact", "quiet")}<p id="status" role="status"></p></div><div class="card"><h2>${t("Privacy & prototype limits", "गोपनीयता और सीमाएँ")}</h2><p>${t("Writing is stored locally without app-level encryption. Accounts use Supabase Auth and this device stores a sign-in session. Optional cloud backups are encrypted with your separate passphrase before upload. No ads, analytics or remote AI. Android app backup is disabled.", "लिखावट स्थानीय है, ऐप-स्तर एन्क्रिप्शन के बिना। खाते Supabase Auth उपयोग करते हैं और डिवाइस साइन-इन सत्र रखता है। वैकल्पिक क्लाउड बैकअप अपलोड से पहले आपकी अलग पासफ़्रेज़ से एन्क्रिप्ट होते हैं। विज्ञापन, एनालिटिक्स या रिमोट AI नहीं। Android ऐप बैकअप बंद है।")}</p><p>${t("Not clinically reviewed. Local safety word matching is incomplete, and optional English screening is not a diagnosis. No automatic cloud sync, remote AI, or new journal cycles. Do not rely on this prototype for urgent support.", "क्लिनिकल समीक्षा नहीं हुई है। स्थानीय सुरक्षा शब्द-मिलान अधूरा है; वैकल्पिक अंग्रेज़ी स्क्रीनिंग निदान नहीं है। अपने आप क्लाउड सिंक, रिमोट AI या नए डायरी चक्र नहीं हैं। तुरंत सहायता के लिए इस प्रोटोटाइप पर निर्भर न रहें।")}</p>${button(account.getUser() ? t("Delete notebook & cloud backup", "डायरी और क्लाउड बैकअप मिटाएँ") : t("Delete all my data", "मेरा सारा डेटा मिटाएँ"), "delete", "danger")}</div><small>Saath 0.5.0 · ${t("Internal testing prototype · 18+", "आंतरिक परीक्षण प्रोटोटाइप · 18+")}</small>`;
   }
 }
 function contactLink() {
@@ -287,6 +295,7 @@ function exercise() {
   return `<div class="card">${tool === "breath" ? `<div class="circle breathe"><span id="phase">${t("Breathe gently", "धीरे साँस लें")}</span></div><p>${t("Let your breath stay comfortable. No need to hold it or breathe deeply. If focusing on breathing feels worse, stop and try grounding.", "आराम से साँस लें। साँस रोकने या गहरी साँस की ज़रूरत नहीं। असहज लगे तो रोकें और ग्राउंडिंग चुनें।")}</p>` : tool === "ground" ? `<h2>${t("Notice your surroundings", "अपने आसपास ध्यान दें")}</h2><ul>${[t("5 things you can see", "5 चीज़ें जो दिखती हैं"), t("4 things you can feel", "4 चीज़ें जिन्हें महसूस कर सकते हैं"), t("3 things you can hear", "3 आवाज़ें जो सुनाई देती हैं"), t("2 things you can smell", "2 चीज़ें जिनकी खुशबू महसूस हो"), t("1 thing you can taste, or one neutral detail nearby", "1 स्वाद, या आसपास की कोई सामान्य चीज़")].map((x) => `<li>${x}</li>`).join("")}</ul>` : `<h2>${t("Count slowly, at your pace", "अपनी गति से धीरे गिनें")}</h2><div class="circle" id="number">20</div>${button(t("Next number", "अगली संख्या"), "next")}<p>${t("Start at 20 and count down. There is no right speed. Stop or restart whenever you want.", "20 से उलटी गिनती करें। कोई सही गति नहीं है। जब चाहें रुकें या फिर शुरू करें।")}</p>`}${button(t("Stop / choose another tool", "रोकें / दूसरा अभ्यास चुनें"), "stop", "quiet")}</div>`;
 }
 function act(a) {
+  if (account.handle(a)) return;
   if (handleExtra(a, featureContext())) return;
   if (a === "back") return goBack();
   if (a === "home-root") {
@@ -421,14 +430,7 @@ function act(a) {
     )
   ) {
     try {
-      localStorage.removeItem(KEY);
-      state = { entries: [], lang: "en" };
-      contactDraft = undefined;
-      navigationStack.length = 0;
-      page = "welcome";
-      tool = "";
-      render();
-      window.scrollTo(0, 0);
+      clearNotebook();
     } catch {
       alert(
         t(
@@ -439,4 +441,82 @@ function act(a) {
     }
   }
 }
+function readNotebook(key) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key));
+    if (
+      value &&
+      Array.isArray(value.entries) &&
+      ["en", "hi"].includes(value.lang)
+    )
+      return value;
+  } catch {}
+  return { entries: [], lang: state.lang || "en" };
+}
+function clearNotebook() {
+  localStorage.removeItem(KEY);
+  state = { entries: [], lang: "en" };
+  contactDraft = undefined;
+  navigationStack.length = 0;
+  page = "welcome";
+  tool = "";
+  render();
+  window.scrollTo(0, 0);
+}
+const account = createAccountController({
+  client: supabase,
+  root,
+  t,
+  escape,
+  button,
+  go,
+  render,
+  getPage: () => page,
+  getNotebook: () => state,
+  getGuestNotebook: () => readNotebook(GUEST_KEY),
+  redirectURL: authRedirectURL,
+  confirm: (message) => window.confirm(message),
+  switchNotebook(owner) {
+    if (owner === notebookOwner) return;
+    notebookOwner = owner;
+    KEY = owner ? `${GUEST_KEY}:account:${owner}` : GUEST_KEY;
+    state = readNotebook(KEY);
+    navigationStack.length = 0;
+    contactDraft = undefined;
+    if (!["panic", "crisis"].includes(page)) {
+      page = state.consent ? "home" : "welcome";
+      tool = "";
+    }
+    render();
+  },
+  applyNotebook(notebook) {
+    const copy = JSON.parse(JSON.stringify(notebook));
+    localStorage.setItem(KEY, JSON.stringify(copy));
+    state = copy;
+    navigationStack.length = 0;
+    if (page === "cloud")
+      navigationStack.push({ page: "account", tool: "", scroll: 0 });
+    contactDraft = undefined;
+    render();
+  },
+  clearNotebook,
+});
 render();
+account.boot();
+listenForNativeAuth(() => {
+  account.notify(
+    t(
+      "This sign-in link could not be opened. Request a new link on this device.",
+      "यह साइन-इन लिंक नहीं खुला। इसी डिवाइस पर नया लिंक माँगें।",
+    ),
+    true,
+  );
+}).catch(() =>
+  account.notify(
+    t(
+      "App-link handling is unavailable. Try signing in with email and password.",
+      "ऐप लिंक उपलब्ध नहीं। ईमेल और पासवर्ड से साइन इन करें।",
+    ),
+    true,
+  ),
+);

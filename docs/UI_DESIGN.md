@@ -23,4 +23,4 @@ A personal notebook, not a wellness landing page. The interface should feel usef
 
 ## Checks and unresolved work
 
-Automated functional tests and mobile browser checks cover English/Hindi layout, focus, mood clearing, reduced motion and existing safety flows. These are not a substitute for usability sessions, a complete contrast/screen-reader audit, font scaling/keyboard testing on real Android devices, or clinical/native-speaker review. The content and storage limitations documented in the PRD and feature coverage remain unchanged.
+Automated functional tests and mobile browser checks cover English/Hindi layout, focus, mood clearing, reduced motion and existing safety flows. These are not a substitute for usability sessions, a complete contrast/screen-reader audit, font scaling/keyboard testing on real Android devices, or clinical/native-speaker review. Clinical limitations remain. Optional account screens use the same reading hierarchy and controls; cloud upload/restore require explicit transfer and replacement consent. Guest/account separation and the remaining unencrypted device-storage limitation are documented in [Supabase notes](SUPABASE.md).

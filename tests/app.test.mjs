@@ -1,3 +1,4 @@
+import { createAccountController, accountPages } from "../src/account.js";
 import * as features from "../src/features.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -11,20 +12,32 @@ const source = readFileSync(new URL("../src/main.js", import.meta.url), "utf8")
   .replace(
     /import\s*\{[\s\S]*?\}\s*from\s*['"]\.\/features\.js['"];?/,
     "const { extraPages, renderExtra, bindExtra, handleExtra, riskSignal, weeklyThemes } = window.__features;",
+  )
+  .replace(
+    /import\s*\{[\s\S]*?\}\s*from\s*['"]\.\/account\.js['"];?/,
+    "const {createAccountController,accountPages}=window.__account;",
+  )
+  .replace(
+    /import\s*\{[\s\S]*?\}\s*from\s*['"]\.\/supabase\.js['"];?/,
+    'const supabase=window.__supabase;const authRedirectURL=()=>"https://saath.test/?auth=callback";const listenForNativeAuth=async()=>{};',
   );
 
-function app(saved) {
+function app(saved, client = null) {
   const dom = new JSDOM('<div id="app"></div>', {
     url: "https://saath.test",
     runScripts: "outside-only",
   });
   const w = dom.window;
   w.__features = features;
+  w.__account = { createAccountController, accountPages };
+  w.__supabase = client;
   w.scrollTo = () => {};
   w.confirm = () => true;
   if (saved)
     w.localStorage.setItem("saath-prototype-v1", JSON.stringify(saved));
-  w.eval(source);
+  w.eval(
+    source + "\nwindow.__accountTest=account;window.__notebookTest=()=>state;",
+  );
   return {
     w,
     doc: w.document,
@@ -510,6 +523,283 @@ test("selection updates keep keyboard focus; navigation focuses the new screen h
   assert.match(
     a.doc.querySelector("#status").textContent,
     /Only stored on this device/,
+  );
+  a.close();
+});
+
+function fakeSupabase() {
+  let current = null;
+  const calls = [];
+  let row = null;
+  const sdk = {
+    calls,
+    auth: {
+      onAuthStateChange() {
+        return { data: { subscription: { unsubscribe() {} } } };
+      },
+      async getSession() {
+        return { data: { session: null }, error: null };
+      },
+      async getUser() {
+        return current
+          ? { data: { user: current }, error: null }
+          : { data: { user: null }, error: { code: "no_session" } };
+      },
+      async signInWithPassword(values) {
+        calls.push(["signin", values.email]);
+        current = {
+          id: values.email.startsWith("second")
+            ? "second-account"
+            : "first-account",
+          email: values.email,
+        };
+        return { data: { session: { user: current } }, error: null };
+      },
+      async signUp(values) {
+        calls.push(["signup", values.email]);
+        return {
+          data: { session: null, user: { id: "confirmation-pending" } },
+          error: null,
+        };
+      },
+      async resetPasswordForEmail(email) {
+        calls.push(["reset", email]);
+        return { data: {}, error: null };
+      },
+      async resend(values) {
+        calls.push(["resend", values.email]);
+        return { data: {}, error: null };
+      },
+      async updateUser() {
+        calls.push(["update-password"]);
+        return { data: { user: current }, error: null };
+      },
+      async signOut() {
+        calls.push(["signout"]);
+        current = null;
+        return { error: null };
+      },
+    },
+    from(table) {
+      calls.push(["table", table]);
+      let operation = "read",
+        payload,
+        revision;
+      const q = {
+        select() {
+          return q;
+        },
+        eq(key, value) {
+          if (key === "revision") revision = value;
+          return q;
+        },
+        insert(value) {
+          operation = "insert";
+          payload = value;
+          return q;
+        },
+        update(value) {
+          operation = "update";
+          payload = value;
+          return q;
+        },
+        async maybeSingle() {
+          if (operation === "read") return { data: row, error: null };
+          if (operation === "update" && revision !== row?.revision)
+            return { data: null, error: null };
+          row = { ...row, ...payload, revision: (row?.revision || 0) + 1 };
+          return { data: { revision: row.revision }, error: null };
+        },
+      };
+      return q;
+    },
+    async rpc(name) {
+      calls.push(["rpc", name]);
+      row = null;
+      return { error: null };
+    },
+    functions: {
+      async invoke(name) {
+        calls.push(["function", name]);
+        return { data: { deleted: true }, error: null };
+      },
+    },
+    getRow: () => row,
+  };
+  return sdk;
+}
+async function settle(a) {
+  for (let i = 0; i < 200; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    if (!a.w.__accountTest.isBusy()) return;
+  }
+  throw Error("Account request did not settle");
+}
+async function signIn(a, email = "first@example.invalid") {
+  a.w.eval("go('login')");
+  a.doc.querySelector("#auth-email").value = email;
+  a.doc.querySelector("#auth-password").value = "long account password";
+  a.doc
+    .querySelector("#account-form")
+    .dispatchEvent(
+      new a.w.Event("submit", { bubbles: true, cancelable: true }),
+    );
+  await settle(a);
+}
+test("login is optional; signup uses confirmation and password fields are cleared", async () => {
+  const sdk = fakeSupabase(),
+    a = app(undefined, sdk);
+  a.click("login");
+  a.click("account-guest");
+  assert.equal(a.doc.querySelector(".app-shell").dataset.page, "welcome");
+  a.click("signup");
+  a.doc.querySelector("#auth-email").value = "owner@example.invalid";
+  a.doc.querySelector("#auth-password").value = "long account password";
+  a.doc.querySelector("#auth-consent").checked = true;
+  a.click("show-password");
+  assert.equal(a.doc.querySelector("#auth-password").type, "text");
+  a.doc
+    .querySelector("#account-form")
+    .dispatchEvent(
+      new a.w.Event("submit", { bubbles: true, cancelable: true }),
+    );
+  await settle(a);
+  assert.equal(sdk.calls[0][0], "signup");
+  assert.match(
+    a.doc.querySelector("#account-status").textContent,
+    /Check your email/,
+  );
+  assert.equal(a.doc.querySelector("#auth-password").value, "");
+  assert.equal(sdk.getRow(), null);
+  a.click("panic");
+  assert.ok(a.doc.querySelector('[data-action="breath"]'));
+  a.close();
+});
+test("accounts have isolated notebooks; guest import and cloud backup require explicit actions", async () => {
+  const guest = {
+      consent: true,
+      lang: "en",
+      entries: [{ date: "2026-11-07", text: "Guest writing" }],
+    },
+    sdk = fakeSupabase(),
+    a = app(guest, sdk);
+  await signIn(a);
+  assert.equal(a.doc.querySelector(".app-shell").dataset.page, "account");
+  assert.equal(a.w.__notebookTest().entries.length, 0);
+  assert.equal(
+    sdk.calls.some((x) => x[0] === "table"),
+    false,
+  );
+  assert.equal(
+    JSON.parse(a.w.localStorage.getItem("saath-prototype-v1")).entries[0].text,
+    "Guest writing",
+  );
+  a.click("import-guest");
+  assert.equal(a.w.__notebookTest().entries[0].text, "Guest writing");
+  assert.equal(sdk.getRow(), null);
+  a.click("cloud");
+  a.doc.querySelector("#vault-password").value = "separate backup passphrase";
+  const form = a.doc.querySelector("#account-form"),
+    submit = a.doc.querySelector('button[value="upload"]');
+  form.dispatchEvent(
+    new a.w.SubmitEvent("submit", {
+      bubbles: true,
+      cancelable: true,
+      submitter: submit,
+    }),
+  );
+  await settle(a);
+  assert.equal(sdk.getRow(), null);
+  a.doc.querySelector("#cloud-consent").checked = true;
+  form.dispatchEvent(
+    new a.w.SubmitEvent("submit", {
+      bubbles: true,
+      cancelable: true,
+      submitter: submit,
+    }),
+  );
+  await settle(a);
+  assert.ok(sdk.getRow()?.ciphertext);
+  assert.equal(sdk.getRow().ciphertext.includes("Guest writing"), false);
+  assert.equal(a.doc.querySelector("#vault-password").value, "");
+  a.click("back");
+  a.click("signout");
+  await settle(a);
+  assert.equal(a.w.__notebookTest().entries[0].text, "Guest writing");
+  await signIn(a, "second@example.invalid");
+  assert.equal(a.w.__notebookTest().entries.length, 0);
+  a.close();
+});
+test("forgot password has neutral feedback; signed-in data deletion removes cloud data first", async () => {
+  const sdk = fakeSupabase(),
+    a = app({ consent: true, lang: "en", entries: [] }, sdk);
+  a.w.eval("go('forgot-password')");
+  a.doc.querySelector("#auth-email").value = "first@example.invalid";
+  a.doc
+    .querySelector("#account-form")
+    .dispatchEvent(
+      new a.w.Event("submit", { bubbles: true, cancelable: true }),
+    );
+  await settle(a);
+  assert.match(
+    a.doc.querySelector("#account-status").textContent,
+    /If recovery is available/,
+  );
+  await signIn(a);
+  a.click("account-guest");
+  a.click("consent");
+  a.click("settings");
+  a.click("delete");
+  await settle(a);
+  assert.ok(
+    sdk.calls.some((x) => x[0] === "rpc" && x[1] === "saath_delete_my_data"),
+  );
+  assert.equal(a.doc.querySelector(".app-shell").dataset.page, "welcome");
+  a.close();
+});
+
+test("a late sign-in response cannot reopen an account after sign-out", async () => {
+  const sdk = fakeSupabase(),
+    a = app({ consent: true, lang: "en", entries: [] }, sdk);
+  let resolveUser;
+  sdk.auth.getUser = () =>
+    new Promise((resolve) => {
+      resolveUser = resolve;
+    });
+  const late = a.w.__accountTest.receive(
+    { user: { id: "first-account" } },
+    "SIGNED_IN",
+  );
+  await a.w.__accountTest.receive(null, "SIGNED_OUT");
+  resolveUser({
+    data: { user: { id: "first-account", email: "first@example.invalid" } },
+    error: null,
+  });
+  await late;
+  assert.equal(a.w.__accountTest.getUser(), null);
+  a.close();
+});
+test("failed remote data deletion keeps the local notebook and reports failure", async () => {
+  const sdk = fakeSupabase(),
+    a = app(
+      {
+        consent: true,
+        lang: "en",
+        entries: [{ date: "2026-11-07", text: "Keep this" }],
+      },
+      sdk,
+    );
+  await signIn(a);
+  a.click("import-guest");
+  a.click("account-guest");
+  a.click("settings");
+  sdk.rpc = async () => ({ error: { code: "network_error" } });
+  a.click("delete");
+  await settle(a);
+  assert.equal(a.w.__notebookTest().entries[0].text, "Keep this");
+  assert.match(
+    a.doc.querySelector("#global-status").textContent,
+    /Could not complete/,
   );
   a.close();
 });

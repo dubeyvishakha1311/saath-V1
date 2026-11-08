@@ -34,7 +34,7 @@ The following are **proposed product decisions**, added to make the MVP buildabl
 
 - Initial pilot serves adults aged 18+ in India. Supporting minors requires separate safeguarding, consent, and legal review.
 - English and Hindi are supported for the pilot, with equivalent safety content and native-speaker review.
-- No account or cloud sync is required for the MVP; local-first storage is the default.
+- Local-first storage and guest use remain the default. Scope amendment (7 Nov 2026): optional Supabase email/password accounts and explicit, separately encrypted manual cloud backup/restore are implemented; this is not automatic sync. Calm/crisis remain ungated. See [deployment and remaining release gates](docs/SUPABASE.md), including custom SMTP, secure device storage and real-device/email tests.
 - Seven days means seven completed entries on separate local calendar dates; missed days do not reset progress.
 - Daily reminders are optional and off until explicitly enabled.
 - Core journaling, panic tools, crisis resources, and deletion remain free during the pilot.

@@ -1,4 +1,4 @@
-# PDF feature coverage · Saath 0.3.0
+# PDF feature coverage · Saath 0.5.0
 
 Source: user-provided `Saath_Idea_Summary.pdf` (November 2026). This is a prototype implementation map, **not** a claim that clinical or legal approval has been obtained.
 
@@ -26,8 +26,8 @@ Source: user-provided `Saath_Idea_Summary.pdf` (November 2026). This is a protot
 | Referral-only interventions | Professional-support information for severe symptoms, trauma/exposure, DBT, psychodynamic or medication questions | No therapist directory or booking; no provider credentials fabricated |
 | Wellness positioning | 18+ consent, non-diagnostic copy, no promises or mind-reading claims | Clinical/legal approval required for public use |
 | Hindi / English | Main UI, stories, poems, rule-based reflection and exercise copy | Native-speaker review pending; screening items remain English with an explicit warning |
-| Device-first privacy | No accounts, cloud, ads or analytics; user-action-only external links/calls | WebView local storage is **not app-level encrypted**; don't use sensitive data on shared devices |
-| Delete all data | Deletes entries, drafts, experiences, screening, contact, theme/positive-day preferences and in-memory navigation | OS/external copies are not controlled by app; backup/security testing pending |
+| Device-first privacy | Optional Supabase Auth; separate guest/account notebooks; explicit passphrase-encrypted cloud backup; no automatic upload, ads or analytics | Local notebook/session storage is **not app-level encrypted**; custom SMTP and security/retention review remain required; see [Supabase notes](SUPABASE.md) |
+| Delete all data | Deletes current guest notebook locally, or signed-in account notebook plus cloud backup; separate verified account-deletion endpoint | Other offline devices/provider/OS copies are not remotely wiped; physical-device/retention review pending |
 
 ## Not represented as completed software features
 

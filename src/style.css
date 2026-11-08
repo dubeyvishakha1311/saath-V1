@@ -1256,3 +1256,18 @@ html[lang="hi"] .screen-title {
 .password-field input:focus {
   outline-offset: 2px;
 }
+
+.google-option {
+  margin: 22px 0 12px;
+  padding: 18px 0 0;
+  border-top: 1px solid var(--line);
+}
+.google-button {
+  font-weight: 650;
+}
+.auth-divider {
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 20px 0;
+}

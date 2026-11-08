@@ -1,4 +1,4 @@
-# Saath · 0.5.0
+# Saath · 0.5.1
 
 An Android-first, English/Hindi **internal-testing wellness prototype** based on the attached idea summary and [PRD.md](PRD.md). Not a clinically approved product, diagnostic tool, therapy service, or monitored crisis service.
 
@@ -33,6 +33,12 @@ Connected to your **saath** Supabase project. Sign in/create account is availabl
 
 **Email delivery still needs custom SMTP in Supabase.** Verification remains enabled; the default sender is restricted to organization-member addresses. Public signup/reset delivery, real email/native-link end-to-end tests and secure on-device token storage are not production-ready. See [Supabase setup, privacy and remaining owner steps](docs/SUPABASE.md).
 
+## Google sign-in (0.5.1)
+
+**Continue with Google** is available on sign-in and signup, with a separate 18+/identity-sharing choice. Android uses a system browser/Custom Tab; web uses a full-page redirect. Both return through Supabase PKCE. No notebook upload follows login.
+
+**Not active yet:** the connected project has Google disabled and no OAuth client credentials. The app checks provider availability and explains the setup requirement rather than launching a broken flow. Follow [Google activation steps](docs/SUPABASE.md#google-sign-in-activation-051); enter the client secret directly in Supabase, not in source or chat. No real Google account sign-in/device callback has been tested.
+
 ## Run and test
 
 Requires Node.js 22+.
@@ -59,7 +65,7 @@ cd android
 
 Output: `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-The GitHub Actions **Build Android APK** workflow performs tests, web/native sync and debug compilation on pushes to `arena/55e548ad-saath-v1`, or manual dispatch. Download the latest successful run's **Saath-0.5.0-debug-apk** artifact from [Actions](https://github.com/dubeyvishakha1311/saath-V1/actions). Artifacts are retained for 14 days.
+The GitHub Actions **Build Android APK** workflow performs tests, web/native sync and debug compilation on pushes to `arena/55e548ad-saath-v1`, or manual dispatch. Download the latest successful run's **Saath-0.5.1-debug-apk** artifact from [Actions](https://github.com/dubeyvishakha1311/saath-V1/actions). Artifacts are retained for 14 days.
 
 ### Install for internal testing
 
@@ -67,7 +73,7 @@ Extract the artifact ZIP and open `app-debug.apk` on Android 6.0+. Enable permis
 
 ### Validation
 
-39 automated tests cover account isolation, explicit backup consent, authenticated deletion, session races, cryptography/tamper rejection, original features, scoring and incomplete inputs, safety overrides, draft preservation, user-theme rejection, HTML escaping, navigation, and delete-all. Mobile Chromium smoke checks exercise Explore screens at 320/390/768px, story reflection, and PHQ-9 safety routing, with no horizontal overflow or uncaught page errors. These checks do not replace clinical validation, a security audit, accessibility testing, or physical Android installation/calling/back-button tests.
+45 automated tests cover account isolation, explicit backup consent, authenticated deletion, session races, cryptography/tamper rejection, original features, scoring and incomplete inputs, safety overrides, draft preservation, user-theme rejection, HTML escaping, navigation, and delete-all. Mobile Chromium smoke checks exercise Explore screens at 320/390/768px, story reflection, and PHQ-9 safety routing, with no horizontal overflow or uncaught page errors. These checks do not replace clinical validation, a security audit, accessibility testing, or physical Android installation/calling/back-button tests.
 
 ## Navigation emphasis (0.3.1)
 

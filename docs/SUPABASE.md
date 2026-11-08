@@ -65,3 +65,24 @@ SMTP/provider/domain credentials are an owner-managed deployment dependency; non
 - Mobile Chromium checks covered 36 account/Calm screen combinations in English/Hindi at 320/390/768px, with mocked Auth responses: no horizontal overflow or page errors. This is not a real email, native-link or authenticated production REST end-to-end test.
 
 Before any public pilot: complete email/device end-to-end tests, review SQL/crypto and XSS threat model independently, use a native secure token/key store and protect on-device notebooks, establish passphrase/key-lifecycle and backup-retention policies, review Supabase region/data processing under applicable Indian privacy law, appoint operations/incident owners, and complete the existing clinical/translation/accessibility gates. Do not advertise the prototype as a clinically validated or audited secure product.
+
+## Google sign-in activation (0.5.1)
+
+**Current remote status:** Google provider disabled; OAuth client ID and secret absent. The app-side flow is implemented but Google sign-in cannot succeed until the owner configures the provider. The connected management tool does not expose Google-provider configuration fields; no credentials or consent-screen settings can be fabricated.
+
+1. In **Google Cloud Console → Google Auth Platform**, select/create your project and configure branding, audience and consent information. For an external app in testing, add the intended Google test users. Use only basic identity scopes (openid/email/profile), not Drive, Contacts or Gmail access. Supply real support/privacy details before publishing.
+2. Under **Clients / Credentials**, create an **OAuth 2.0 client of type Web application**. This browser-based Supabase flow uses a web client even on Android; it does not use a native Google SDK or Android SHA fingerprint configuration.
+3. Add this exact **Authorized redirect URI** to that Google web client:
+
+   ```text
+   https://ittnpegkfonxvkcfqmgd.supabase.co/auth/v1/callback
+   ```
+
+   This Google-to-Supabase callback is different from the app's native callback. Do not put the Android custom scheme in Google's authorized redirect URI field. If configuring JavaScript origins for a web deployment, use its exact HTTPS origin (no paths); this app does not load the Google JavaScript SDK.
+4. Open [Saath's Supabase Auth providers](https://supabase.com/dashboard/project/ittnpegkfonxvkcfqmgd/auth/providers), choose **Google**, enter the web client ID and client secret **directly there**, enable Google and save. Leave nonce protections enabled; do not enable unverified-email sign-ins. Never put the Google secret in `.env`, the client bundle, GitHub or chat.
+5. Keep the existing app redirect URLs allowlisted under Supabase URL Configuration: the preview's `/?auth=callback` and `in.saath.wellness://auth/callback`. Add the exact permanent web callback when deploying elsewhere. Do not replace Google's callback URI with these app return URLs.
+6. Open **Sign in → Continue with Google**, confirm identity-sharing consent, choose a test Google account and finish in the same browser/app/device. The app checks live provider settings on each attempt, so enabling the provider does not require another APK build. Test denial/cancellation, returning to Android from the browser, cold-start callbacks, existing email-account identity behavior, sign-out, and notebook isolation. Supabase can associate identities sharing a verified email; do not assume each provider creates a separate notebook/account or copy data based on email addresses.
+
+Android uses `@capacitor/browser` to open Supabase's authorization URL in the system browser/Custom Tab instead of Google-blocked embedded WebView OAuth. PKCE exchanges the callback code via Supabase; no client secret is shipped. Provider errors are shown generically; callback errors are not reflected or logged. Google/Supabase receive basic identity and authentication data; no notebook text goes to Google. Sessions remain in the prototype's device storage, with the same security limitations described above.
+
+Google sign-in does not need Supabase's signup email sender for its normal verified Google OAuth flow, but custom SMTP is still needed for Saath's email/password signup and password-reset features. Automated tests use mocked provider/browser responses and do **not** prove a real Google account or Android round trip works. Activate and test with dedicated accounts before a pilot.

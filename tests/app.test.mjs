@@ -19,7 +19,7 @@ const source = readFileSync(new URL("../src/main.js", import.meta.url), "utf8")
   )
   .replace(
     /import\s*\{[\s\S]*?\}\s*from\s*['"]\.\/supabase\.js['"];?/,
-    'const supabase=window.__supabase;const authRedirectURL=()=>"https://saath.test/?auth=callback";const listenForNativeAuth=async()=>{};',
+    'const supabase=window.__supabase;const authRedirectURL=()=>"https://saath.test/?auth=callback";const listenForNativeAuth=async()=>{};const authCallbackFailed=()=>false;const startGoogleSignIn=async()=>{window.__googleCalls=(window.__googleCalls||0)+1;if(window.__googleError)throw window.__googleError;};',
   );
 
 function app(saved, client = null) {
@@ -800,6 +800,44 @@ test("failed remote data deletion keeps the local notebook and reports failure",
   assert.match(
     a.doc.querySelector("#global-status").textContent,
     /Could not complete/,
+  );
+  a.close();
+});
+
+test("Google sign-in appears on login/signup, requires separate consent and never uploads notebooks", async () => {
+  const sdk = fakeSupabase(),
+    a = app({ consent: true, lang: "en", entries: [] }, sdk);
+  a.click("settings");
+  a.click("login");
+  a.click("google-signin");
+  await settle(a);
+  assert.equal(a.w.__googleCalls, undefined);
+  assert.match(
+    a.doc.querySelector("#account-status").textContent,
+    /confirm the Google/,
+  );
+  a.doc.querySelector("#google-consent").checked = true;
+  a.click("google-signin");
+  await settle(a);
+  assert.equal(a.w.__googleCalls, 1);
+  a.w.__googleError = { code: "google_provider_disabled" };
+  a.click("google-signin");
+  await settle(a);
+  assert.match(
+    a.doc.querySelector("#account-status").textContent,
+    /project owner must configure Google OAuth/,
+  );
+  assert.equal(
+    sdk.calls.some((x) => x[0] === "table"),
+    false,
+  );
+  a.click("signup");
+  assert.ok(a.doc.querySelector("[data-action=google-signin]"));
+  assert.equal(a.doc.querySelector("#google-consent").checked, false);
+  a.click("language");
+  assert.match(
+    a.doc.querySelector("[data-action=google-signin]").textContent,
+    /Google से/,
   );
   a.close();
 });

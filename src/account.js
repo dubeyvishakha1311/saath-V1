@@ -40,6 +40,11 @@ export function createAccountController(c) {
     return `<p id="account-status" role="status" aria-live="polite" class="status ${problem ? "error" : ""}">${c.escape(message)}</p>`;
   }
   function authError(error) {
+    if (error?.code === "google_provider_disabled")
+      return tr(
+        "Google sign-in is not enabled for Saath yet. The project owner must configure Google OAuth in Supabase. Email sign-in and guest mode are still available.",
+        "साथ में Google साइन-इन अभी सक्षम नहीं है। प्रोजेक्ट मालिक को Supabase में Google OAuth सेट करना होगा। ईमेल साइन-इन और अतिथि मोड उपलब्ध हैं।",
+      );
     if (
       error?.status === 429 ||
       ["over_email_send_rate_limit", "over_request_rate_limit"].includes(
@@ -65,7 +70,7 @@ export function createAccountController(c) {
     busy = true;
     notify("");
     c.root
-      .querySelectorAll("#account-form button")
+      .querySelectorAll('#account-form button, [data-action="google-signin"]')
       .forEach((el) => (el.disabled = true));
     c.root.querySelector("#account-form")?.setAttribute("aria-busy", "true");
     try {
@@ -75,7 +80,7 @@ export function createAccountController(c) {
     } finally {
       busy = false;
       c.root
-        .querySelectorAll("#account-form button")
+        .querySelectorAll('#account-form button, [data-action="google-signin"]')
         .forEach((el) => (el.disabled = false));
       c.root.querySelector("#account-form")?.removeAttribute("aria-busy");
       c.root
@@ -149,6 +154,9 @@ export function createAccountController(c) {
   function settingsCard() {
     return `<div class="card account-summary"><div class="eyebrow">${tr("ACCOUNT", "खाता")}</div><h2>${user ? tr("Signed in", "साइन इन है") : tr("On this device only", "केवल इस डिवाइस पर")}</h2><p>${user ? c.escape(user.email || "") : tr("No account needed for local journaling or Calm.", "स्थानीय डायरी या सुकून के लिए खाता ज़रूरी नहीं।")}</p>${c.button(user ? tr("Account & backup", "खाता और बैकअप") : tr("Sign in / create account", "साइन इन / खाता बनाएँ"), user ? "account" : "login", "quiet wide")}</div>`;
   }
+  function googleOption() {
+    return `<div class="google-option">${status()}<label class="check-row"><input id="google-consent" type="checkbox"><span>${tr("I am 18+ and choose to share my Google email and basic profile with Supabase for sign-in. This device stores my session; my notebook is not uploaded.", "मैं 18+ हूँ और साइन-इन के लिए अपना Google ईमेल और बुनियादी प्रोफ़ाइल Supabase से साझा करना चुनता/चुनती हूँ। यह डिवाइस सत्र रखता है; डायरी अपलोड नहीं होती।")}</span></label>${c.button(tr("Continue with Google", "Google से जारी रखें"), "google-signin", "quiet wide google-button")}<p class="auth-divider">${tr("or use email", "या ईमेल उपयोग करें")}</p></div>`;
+  }
   function renderPage(page) {
     if (!accountPages.includes(page)) return null;
     if ((page === "account" || page === "cloud") && !user) page = "login";
@@ -164,7 +172,7 @@ export function createAccountController(c) {
         reset = page === "reset-password";
       if (reset && (!user || !recovery))
         return `<h1>${tr("Open your recovery link", "अपना रिकवरी लिंक खोलें")}</h1><p>${tr("Use the password-reset link from your email on the same device where you requested it. If it expired, request a new link.", "उसी डिवाइस पर ईमेल का पासवर्ड-रीसेट लिंक खोलें जहाँ से माँगा था। समय समाप्त हो तो नया लिंक माँगें।")}</p>${b(tr("Request reset email", "रीसेट ईमेल माँगें"), "forgot-password", "primary")}${status()}`;
-      return `<div class="eyebrow">SAATH / ${tr("YOUR ACCOUNT", "आपका खाता")}</div><h1>${signup ? tr("A place to come back to.", "फिर लौटने की एक जगह।") : forgot ? tr("Forgot your password?", "पासवर्ड भूल गए?") : reset ? tr("Choose a new password.", "नया पासवर्ड चुनें।") : tr("Welcome back.", "फिर स्वागत है।")}</h1><p class="muted">${forgot ? tr("We’ll email a link if recovery is available for that address.", "उस पते के लिए रिकवरी उपलब्ध हो तो ईमेल लिंक भेजेंगे।") : tr("Cloud backup is optional. Signing in does not upload your notebook.", "क्लाउड बैकअप वैकल्पिक है। साइन इन करने से डायरी अपलोड नहीं होती।")}</p><form id="account-form" data-auth-form="${page}">${!reset ? `<label for="auth-email">${tr("Email address", "ईमेल पता")}</label><input id="auth-email" type="email" autocomplete="email" maxlength="254" required inputmode="email">` : ""}${!forgot ? `<label for="auth-password">${reset ? tr("New password", "नया पासवर्ड") : tr("Password", "पासवर्ड")}</label><div class="password-field"><input id="auth-password" type="password" autocomplete="${signup || reset ? "new-password" : "current-password"}" minlength="${signup || reset ? 12 : 1}" maxlength="1024" required><button type="button" data-action="show-password" aria-pressed="false">${tr("Show", "दिखाएँ")}</button></div>${signup || reset ? `<small>${tr("Use at least 12 characters. Do not reuse your backup passphrase.", "कम से कम 12 अक्षर रखें। बैकअप पासफ़्रेज़ अलग रखें।")}</small>` : ""}` : ""}${signup ? `<label class="check-row"><input id="auth-consent" type="checkbox" required><span>${tr("I am 18+ and agree to send my email and authentication requests to Supabase. This device will store my sign-in session. Notebook backup needs a separate choice.", "मैं 18+ हूँ और ईमेल व प्रमाणीकरण अनुरोध Supabase को भेजने से सहमत हूँ। इस डिवाइस पर साइन-इन सत्र रहेगा। डायरी बैकअप के लिए अलग चुनाव होगा।")}</span></label>` : ""}<button type="submit" class="primary wide">${signup ? tr("Create account", "खाता बनाएँ") : forgot ? tr("Send reset link", "रीसेट लिंक भेजें") : reset ? tr("Save new password", "नया पासवर्ड सेव करें") : tr("Sign in", "साइन इन")}</button>${status()}${page === "login" ? b(tr("Resend confirmation email", "पुष्टि ईमेल फिर भेजें"), "resend-confirmation", "text-button") : ""}</form>${page === "login" ? `<div class="auth-links">${b(tr("Forgot password?", "पासवर्ड भूल गए?"), "forgot-password", "text-button")}${b(tr("Create an account", "खाता बनाएँ"), "signup", "text-button")}</div>` : ""}${signup || forgot ? b(tr("Back to sign in", "साइन इन पर वापस"), "login", "text-button") : ""}${!reset ? b(tr("Continue without an account", "बिना खाते के जारी रखें"), "account-guest", "quiet wide") + b(tr("Open Calm without signing in", "बिना साइन इन सुकून खोलें"), "panic", "text-button") : ""}<p class="notice">${tr("Calm and crisis help never require login. Local writing is not encrypted at app level. Supabase stores your account email/session; cloud backups are separately encrypted with your own passphrase.", "सुकून और संकट सहायता के लिए लॉगिन ज़रूरी नहीं। स्थानीय लिखावट ऐप-स्तर पर एन्क्रिप्टेड नहीं है। Supabase आपका खाता ईमेल/सत्र रखता है; क्लाउड बैकअप आपकी पासफ़्रेज़ से अलग एन्क्रिप्ट होता है।")}</p>`;
+      return `<div class="eyebrow">SAATH / ${tr("YOUR ACCOUNT", "आपका खाता")}</div><h1>${signup ? tr("A place to come back to.", "फिर लौटने की एक जगह।") : forgot ? tr("Forgot your password?", "पासवर्ड भूल गए?") : reset ? tr("Choose a new password.", "नया पासवर्ड चुनें।") : tr("Welcome back.", "फिर स्वागत है।")}</h1><p class="muted">${forgot ? tr("We’ll email a link if recovery is available for that address.", "उस पते के लिए रिकवरी उपलब्ध हो तो ईमेल लिंक भेजेंगे।") : tr("Cloud backup is optional. Signing in does not upload your notebook.", "क्लाउड बैकअप वैकल्पिक है। साइन इन करने से डायरी अपलोड नहीं होती।")}</p>${!forgot && !reset ? googleOption() : ""}<form id="account-form" data-auth-form="${page}">${!reset ? `<label for="auth-email">${tr("Email address", "ईमेल पता")}</label><input id="auth-email" type="email" autocomplete="email" maxlength="254" required inputmode="email">` : ""}${!forgot ? `<label for="auth-password">${reset ? tr("New password", "नया पासवर्ड") : tr("Password", "पासवर्ड")}</label><div class="password-field"><input id="auth-password" type="password" autocomplete="${signup || reset ? "new-password" : "current-password"}" minlength="${signup || reset ? 12 : 1}" maxlength="1024" required><button type="button" data-action="show-password" aria-pressed="false">${tr("Show", "दिखाएँ")}</button></div>${signup || reset ? `<small>${tr("Use at least 12 characters. Do not reuse your backup passphrase.", "कम से कम 12 अक्षर रखें। बैकअप पासफ़्रेज़ अलग रखें।")}</small>` : ""}` : ""}${signup ? `<label class="check-row"><input id="auth-consent" type="checkbox" required><span>${tr("I am 18+ and agree to send my email and authentication requests to Supabase. This device will store my sign-in session. Notebook backup needs a separate choice.", "मैं 18+ हूँ और ईमेल व प्रमाणीकरण अनुरोध Supabase को भेजने से सहमत हूँ। इस डिवाइस पर साइन-इन सत्र रहेगा। डायरी बैकअप के लिए अलग चुनाव होगा।")}</span></label>` : ""}<button type="submit" class="primary wide">${signup ? tr("Create account", "खाता बनाएँ") : forgot ? tr("Send reset link", "रीसेट लिंक भेजें") : reset ? tr("Save new password", "नया पासवर्ड सेव करें") : tr("Sign in", "साइन इन")}</button>${forgot || reset ? status() : ""}${page === "login" ? b(tr("Resend confirmation email", "पुष्टि ईमेल फिर भेजें"), "resend-confirmation", "text-button") : ""}</form>${page === "login" ? `<div class="auth-links">${b(tr("Forgot password?", "पासवर्ड भूल गए?"), "forgot-password", "text-button")}${b(tr("Create an account", "खाता बनाएँ"), "signup", "text-button")}</div>` : ""}${signup || forgot ? b(tr("Back to sign in", "साइन इन पर वापस"), "login", "text-button") : ""}${!reset ? b(tr("Continue without an account", "बिना खाते के जारी रखें"), "account-guest", "quiet wide") + b(tr("Open Calm without signing in", "बिना साइन इन सुकून खोलें"), "panic", "text-button") : ""}<p class="notice">${tr("Calm and crisis help never require login. Local writing is not encrypted at app level. Supabase stores your account email/session; cloud backups are separately encrypted with your own passphrase.", "सुकून और संकट सहायता के लिए लॉगिन ज़रूरी नहीं। स्थानीय लिखावट ऐप-स्तर पर एन्क्रिप्टेड नहीं है। Supabase आपका खाता ईमेल/सत्र रखता है; क्लाउड बैकअप आपकी पासफ़्रेज़ से अलग एन्क्रिप्ट होता है।")}</p>`;
     }
     if (page === "account")
       return `<h1>${tr("Your account.", "आपका खाता।")}</h1><p>${e(user.email || "")}</p><div class="card"><h2>${tr("Private by choice", "गोपनीयता, आपकी पसंद")}</h2><p>${tr("This account has its own notebook on this device. Nothing is uploaded automatically. Cloud backup is a manual, encrypted snapshot—not live sync.", "इस खाते की इस डिवाइस पर अपनी डायरी है। अपने आप कुछ अपलोड नहीं होता। क्लाउड बैकअप मैन्युअल एन्क्रिप्टेड प्रति है—लाइव सिंक नहीं।")}</p>${b(tr("Encrypted cloud backup", "एन्क्रिप्टेड क्लाउड बैकअप"), "cloud", "primary wide")}${b(tr("Copy my guest notebook into this account", "इस खाते में अतिथि डायरी की कॉपी लाएँ"), "import-guest", "quiet wide")}</div><div id="account-form"><div class="row">${b(tr("Sign out on this device", "इस डिवाइस पर साइन आउट"), "signout", "quiet")}${b(tr("Back to my notebook", "मेरी डायरी पर वापस"), "account-guest", "quiet")}</div>${status()}<details class="card"><summary>${tr("Delete this account", "यह खाता मिटाएँ")}</summary><p>${tr("Permanently deletes this Supabase account, its cloud backup and this account’s notebook on this device. Other offline devices and Supabase provider backups are not remotely wiped. Guest notebooks are separate.", "यह Supabase खाता, उसका क्लाउड बैकअप और इस डिवाइस पर इस खाते की डायरी हमेशा के लिए मिटेगी। दूसरे ऑफलाइन डिवाइस और Supabase प्रदाता बैकअप दूर से नहीं मिटते। अतिथि डायरी अलग है।")}</p><label for="delete-confirm">${tr("Type DELETE to confirm", "पुष्टि के लिए DELETE लिखें")}</label><input id="delete-confirm" autocomplete="off"><button type="button" class="danger" data-action="delete-account">${tr("Delete account permanently", "खाता हमेशा के लिए मिटाएँ")}</button></details></div>`;
@@ -340,6 +348,7 @@ export function createAccountController(c) {
         "delete-account",
         "delete",
         "resend-confirmation",
+        "google-signin",
       ].includes(action)
     )
       return true;
@@ -347,6 +356,28 @@ export function createAccountController(c) {
       message = "";
       problem = false;
       c.go(action);
+      return true;
+    }
+    if (action === "google-signin") {
+      if (!c.root.querySelector("#google-consent")?.checked) {
+        notify(
+          tr(
+            "Please confirm the Google sign-in choice above first.",
+            "पहले ऊपर Google साइन-इन की सहमति दें।",
+          ),
+          true,
+        );
+        return true;
+      }
+      run(async () => {
+        await c.startGoogleSignIn();
+        notify(
+          tr(
+            "Complete sign-in in your browser. If you cancelled, you can try again.",
+            "ब्राउज़र में साइन-इन पूरा करें। रद्द किया हो तो फिर कोशिश कर सकते हैं।",
+          ),
+        );
+      });
       return true;
     }
     if (action === "show-password") {

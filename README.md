@@ -1,4 +1,4 @@
-# Saath · 0.5.1
+# Saath · 0.6.0
 
 An Android-first, English/Hindi **internal-testing wellness prototype** based on the attached idea summary and [PRD.md](PRD.md). Not a clinically approved product, diagnostic tool, therapy service, or monitored crisis service.
 
@@ -7,7 +7,7 @@ An Android-first, English/Hindi **internal-testing wellness prototype** based on
 - Mobile Today dashboard, optional local mood check-in, icon tabs, Back/Home/help controls and Android hardware-back integration.
 - **Explore:** original story and poem prompts, song title/artist/link plus reflection on the user's explanation only. No song playback, lyrics fetching, or song-content analysis.
 - Saved local reflections, draft recovery, tentative keyword-based themes with visible word evidence, and rejection of themes that do not fit.
-- Seven completed-day journal, weekly themes, user-selected positive moments, and optional small exercises. Missed days do not reset progress.
+- Tap-first seven-day journal: Day 1 pick one, Days 2–7 pick all that fit. Typing is optional and collapsed by default. Choice drafts recover and same-day entries can be edited. Weekly review retains selected options without turning them into inferred diagnoses. Missed days do not reset progress.
 - Six exercise types: CBT-informed perspective, small daily action, basic mindfulness, self-compassion, expressive writing, and ACT-style values prompts.
 - Optional conversational-style **English PHQ-9 / GAD-7** questionnaire flows, 0–3 scoring, non-diagnostic results, previous-question editing, discard/delete, and self-report limitations. No validated Hindi instrument translation is bundled.
 - Local safety-word routing for supported English/Hindi/Roman-Hindi phrases across submitted journal/story/song/poem/exercise text. **Incomplete and not clinically validated**: it can miss signals or produce false positives. Never assume a user is safe because it did not trigger.
@@ -26,6 +26,15 @@ Data is stored in app-local WebView storage **without app-level encryption**. So
 External resources open only on user action. Dialler links require calling service and do not automatically place calls. India numbers were checked against official web listings on 7 November 2026, **not call-tested**. They are not a worldwide resource directory.
 
 No remote AI/provider, validated Hindi screening, therapist booking/provider directory, voice journaling, payment, subscription, institution dashboard, cloud sync, or additional journal cycles are implemented. Some of these are optional business ideas in the PDF rather than core app requirements. A production launch requires clinical, native-speaker, accessibility, device, security, privacy/legal, and operational review—not just a successful build.
+
+## Tap-first check-ins and research (0.6.0)
+
+- Story/Song/Poem cards first open a research screen with independently sourced participation percentage bars, populations, dates, links and an explicit **not treatment evidence / not a preference ranking** notice. The activity follows via Continue; each supports tap-only answers and optional notes.
+- Selecting **“I wish I could disappear” on Day 5** opens crisis support immediately, before saving/submitting. Tele-MANAS 14416 and emergency 112 remain visible. This precautionary rule is **awaiting psychologist review**, not a diagnosis or validated risk assessment; nobody is alerted.
+- All journal/creative selections, notes and drafts are included in the existing single encrypted account backup in Supabase. They are saved on-device immediately; **cloud upload is manual**, with explicit consent/passphrase. No plaintext response table or activity tracking was added. Sign in, copy a guest notebook if needed, then use Account & backup → Encrypted cloud backup.
+- Checked with 52 automated tests and 84 mobile Chromium screen combinations in English/Hindi at 320/390/768px. Physical Android, clinical and real-account/provider testing remain release gates.
+
+See [research sources, storage map and review checklist](docs/RESEARCH_AND_CHOICES.md).
 
 ## Accounts and Supabase (0.5.0)
 
@@ -65,7 +74,7 @@ cd android
 
 Output: `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-The GitHub Actions **Build Android APK** workflow performs tests, web/native sync and debug compilation on pushes to `arena/55e548ad-saath-v1`, or manual dispatch. Download the latest successful run's **Saath-0.5.1-debug-apk** artifact from [Actions](https://github.com/dubeyvishakha1311/saath-V1/actions). Artifacts are retained for 14 days.
+The GitHub Actions **Build Android APK** workflow performs tests, web/native sync and debug compilation on pushes to `arena/55e548ad-saath-v1`, or manual dispatch. Download the latest successful run's **Saath-0.6.0-debug-apk** artifact from [Actions](https://github.com/dubeyvishakha1311/saath-V1/actions). Artifacts are retained for 14 days.
 
 ### Install for internal testing
 
@@ -73,7 +82,7 @@ Extract the artifact ZIP and open `app-debug.apk` on Android 6.0+. Enable permis
 
 ### Validation
 
-45 automated tests cover account isolation, explicit backup consent, authenticated deletion, session races, cryptography/tamper rejection, original features, scoring and incomplete inputs, safety overrides, draft preservation, user-theme rejection, HTML escaping, navigation, and delete-all. Mobile Chromium smoke checks exercise Explore screens at 320/390/768px, story reflection, and PHQ-9 safety routing, with no horizontal overflow or uncaught page errors. These checks do not replace clinical validation, a security audit, accessibility testing, or physical Android installation/calling/back-button tests.
+52 automated tests cover account isolation, explicit backup consent, authenticated deletion, session races, cryptography/tamper rejection, original features, scoring and incomplete inputs, safety overrides, draft preservation, user-theme rejection, HTML escaping, navigation, and delete-all. Mobile Chromium smoke checks exercise Explore screens at 320/390/768px, story reflection, and PHQ-9 safety routing, with no horizontal overflow or uncaught page errors. These checks do not replace clinical validation, a security audit, accessibility testing, or physical Android installation/calling/back-button tests.
 
 ## Navigation emphasis (0.3.1)
 

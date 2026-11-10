@@ -16,6 +16,15 @@ import {
   startGoogleSignIn,
   authCallbackFailed,
 } from "./supabase.js";
+import {
+  dailyQuestions,
+  journalDay,
+  journalSelection,
+  hasJournalSafetyChoice,
+  journalSummary,
+  choiceButtons,
+  toggleOption,
+} from "./journal.js";
 const root = document.querySelector("#app");
 const GUEST_KEY = "saath-prototype-v1";
 let KEY = GUEST_KEY;
@@ -50,21 +59,7 @@ const persist = () => {
     return false;
   }
 };
-const prompts = [
-  ["How was your day, really?", "आज आपका दिन सच में कैसा रहा?"],
-  ["What felt heavy today?", "आज क्या भारी लगा?"],
-  ["What brought you a little comfort?", "आज किस बात से थोड़ा सुकून मिला?"],
-  ["What did you do for yourself?", "आज आपने अपने लिए क्या किया?"],
-  [
-    "Is there something you wish you could say?",
-    "क्या कुछ है जो आप कहना चाहते हैं?",
-  ],
-  ["What matters to you right now?", "इस समय आपके लिए क्या ज़रूरी है?"],
-  [
-    "What would you like to carry into next week?",
-    "अगले हफ़्ते आप क्या साथ ले जाना चाहते हैं?",
-  ],
-];
+const prompts = dailyQuestions.map((q) => [q.en, q.hi]);
 const today = () => state.entries.find((e) => e.date === date());
 const navigationStack = [];
 let contactDraft;
@@ -103,7 +98,7 @@ function goBack() {
 }
 window.addEventListener("saath:back", goBack);
 function screenControls() {
-  return `<div class="screen-controls" role="group" aria-label="${t("Screen navigation", "स्क्रीन नेविगेशन")}"><button class="back-button" data-action="back" ${navigationStack.length ? "" : "disabled"}>${icon("back")}<span>${t("Back", "वापस")}</span></button><span class="screen-title">${t({ home: "TODAY", welcome: "WELCOME", journal: "JOURNAL", panic: tool ? "EXERCISE" : "CALM SPACE", settings: "MY SPACE", reflection: "MY WEEK", crisis: "SUPPORT", explore: "EXPLORE", story: "STORY", song: "SONG", poem: "POEM", experience: "REFLECTION", library: "EXERCISES", exercise: "SMALL STEP", screening: "CHECK-IN", questionnaire: "CHECK-IN", "screen-result": "CHECK-IN", history: "SAVED", professional: "PROFESSIONAL HELP", login: "SIGN IN", signup: "CREATE ACCOUNT", "forgot-password": "PASSWORD HELP", "reset-password": "NEW PASSWORD", account: "ACCOUNT", cloud: "CLOUD BACKUP" }[page], { home: "आज", welcome: "स्वागत", journal: "डायरी", panic: tool ? "अभ्यास" : "सुकून", settings: "मेरी जगह", reflection: "मेरा सप्ताह", crisis: "सहायता", explore: "आज़माएँ", story: "कहानी", song: "गीत", poem: "कविता", experience: "चिंतन", library: "अभ्यास", exercise: "छोटा कदम", screening: "जाँच", questionnaire: "जाँच", "screen-result": "जाँच", history: "सेव किया", professional: "पेशेवर सहायता", login: "साइन इन", signup: "खाता बनाएँ", "forgot-password": "पासवर्ड सहायता", "reset-password": "नया पासवर्ड", account: "खाता", cloud: "क्लाउड बैकअप" }[page])}</span>${button(icon("home") + `<span>${t("Home", "होम")}</span>`, "home-root", "home-button")}</div>`;
+  return `<div class="screen-controls" role="group" aria-label="${t("Screen navigation", "स्क्रीन नेविगेशन")}"><button class="back-button" data-action="back" ${navigationStack.length ? "" : "disabled"}>${icon("back")}<span>${t("Back", "वापस")}</span></button><span class="screen-title">${t({ home: "TODAY", welcome: "WELCOME", journal: "JOURNAL", panic: tool ? "EXERCISE" : "CALM SPACE", settings: "MY SPACE", reflection: "MY WEEK", crisis: "SUPPORT", explore: "EXPLORE", story: "STORY", song: "SONG", poem: "POEM", experience: "REFLECTION", library: "EXERCISES", exercise: "SMALL STEP", screening: "CHECK-IN", questionnaire: "CHECK-IN", "screen-result": "CHECK-IN", history: "SAVED", professional: "PROFESSIONAL HELP", "research-story": "RESEARCH", "research-song": "RESEARCH", "research-poem": "RESEARCH", login: "SIGN IN", signup: "CREATE ACCOUNT", "forgot-password": "PASSWORD HELP", "reset-password": "NEW PASSWORD", account: "ACCOUNT", cloud: "CLOUD BACKUP" }[page], { home: "आज", welcome: "स्वागत", journal: "डायरी", panic: tool ? "अभ्यास" : "सुकून", settings: "मेरी जगह", reflection: "मेरा सप्ताह", crisis: "सहायता", explore: "आज़माएँ", story: "कहानी", song: "गीत", poem: "कविता", experience: "चिंतन", library: "अभ्यास", exercise: "छोटा कदम", screening: "जाँच", questionnaire: "जाँच", "screen-result": "जाँच", history: "सेव किया", professional: "पेशेवर सहायता", "research-story": "शोध", "research-song": "शोध", "research-poem": "शोध", login: "साइन इन", signup: "खाता बनाएँ", "forgot-password": "पासवर्ड सहायता", "reset-password": "नया पासवर्ड", account: "खाता", cloud: "क्लाउड बैकअप" }[page])}</span>${button(icon("home") + `<span>${t("Home", "होम")}</span>`, "home-root", "home-button")}</div>`;
 }
 function button(label, action, cls = "") {
   return `<button class="${cls}" data-action="${action}">${label}</button>`;
@@ -253,7 +248,7 @@ function renderHome() {
     .join(
       "",
     )}</div><p class="mood-note" role="status">${checkedIn ? t("Saved for today. Tap the same feeling to clear it.", "आज के लिए सेव है। हटाने के लिए उसी भावना पर फिर टैप करें।") : t("No right or wrong way to feel. You can skip this.", "महसूस करने का कोई सही या गलत तरीका नहीं। इसे छोड़ सकते हैं।")}</p></section>
-  <section class="journal-tile"><div class="tile-top"><span class="eyebrow">${t("YOUR SEVEN-DAY JOURNAL", "आपकी सात दिन की डायरी")}</span><span class="journal-day">${String(day).padStart(2, "0")}<small>/ 07</small></span></div><h2>${completed >= 7 ? t("A week,<br>in your own words.", "एक सप्ताह,<br>आपके अपने शब्दों में।") : t("A few words<br>about today.", "आज के बारे में<br>कुछ शब्द।")}</h2><p>${completed >= 7 ? t("Revisit what you wrote. See what stands out.", "अपनी लिखी बातें फिर पढ़ें। देखें क्या अलग लगता है।") : escape(prompts[Math.min(day - 1, 6)][hi() ? 1 : 0])}</p>${button(`<span>${completed >= 7 ? t("Read my week", "मेरा सप्ताह पढ़ें") : t(today() ? "Continue writing" : "Open my journal", today() ? "लिखना जारी रखें" : "मेरी डायरी खोलें")}</span>${icon("arrow")}`, completed >= 7 ? "reflection" : "journal", "primary wide")}<div class="journal-bottom"><div class="dots" aria-label="${t(`${completed} of 7 days completed`, `7 में से ${completed} दिन पूरे`)}">${Array.from({ length: 7 }, (_, i) => `<span class="dot ${i < completed ? "done" : ""}">${i < completed ? "✓" : i + 1}</span>`).join("")}</div><span>${completed}/7 ${t("written", "दिन लिखे")}</span></div><small>${t("Missed days don’t reset your progress.", "छूटे दिनों से आपकी प्रगति नहीं मिटती।")}</small></section>
+  <section class="journal-tile"><div class="tile-top"><span class="eyebrow">${t("YOUR SEVEN-DAY JOURNAL", "आपकी सात दिन की डायरी")}</span><span class="journal-day">${String(day).padStart(2, "0")}<small>/ 07</small></span></div><h2>${completed >= 7 ? t("A week,<br>in your own words.", "एक सप्ताह,<br>आपके अपने शब्दों में।") : t("A few taps<br>about today.", "आज के बारे में<br>कुछ चुनाव।")}</h2><p>${completed >= 7 ? t("Revisit what you wrote. See what stands out.", "अपनी लिखी बातें फिर पढ़ें। देखें क्या अलग लगता है।") : escape(prompts[Math.min(day - 1, 6)][hi() ? 1 : 0])}</p>${button(`<span>${completed >= 7 ? t("Read my week", "मेरा सप्ताह पढ़ें") : t(today() ? "Review today" : "Open my journal", today() ? "आज के जवाब देखें" : "मेरी डायरी खोलें")}</span>${icon("arrow")}`, completed >= 7 ? "reflection" : "journal", "primary wide")}<div class="journal-bottom"><div class="dots" aria-label="${t(`${completed} of 7 days completed`, `7 में से ${completed} दिन पूरे`)}">${Array.from({ length: 7 }, (_, i) => `<span class="dot ${i < completed ? "done" : ""}">${i < completed ? "✓" : i + 1}</span>`).join("")}</div><span>${completed}/7 ${t("completed", "दिन पूरे")}</span></div><small>${t("Missed days don’t reset your progress.", "छूटे दिनों से आपकी प्रगति नहीं मिटती।")}</small></section>
   <section class="quick-section"><div class="section-title"><h2>${t("Need a moment?", "थोड़ा रुकना चाहेंगे?")}</h2><span>${t("No writing needed", "लिखना ज़रूरी नहीं")}</span></div><div class="quick-tools"><button class="quick-tile" data-action="quick-breath"><span class="tool-symbol">${icon("panic")}</span><span><strong>${t("Slow breathing", "धीरे साँस लें")}</strong><small>${t("Follow a comfortable rhythm", "आरामदायक लय में साँस लें")}</small></span><span class="tile-arrow">${icon("arrow")}</span></button><button class="quick-tile" data-action="quick-ground"><span class="tool-symbol">${icon("sun")}</span><span><strong>${t("Notice what’s around you", "अपने आसपास ध्यान दें")}</strong><small>${t("5–4–3–2–1 grounding", "5–4–3–2–1 ग्राउंडिंग")}</small></span><span class="tile-arrow">${icon("arrow")}</span></button></div></section>
   <button class="explore-entry" data-action="explore"><span><strong>${t("Start somewhere else", "कहीं और से शुरू करें")}</strong><small>${t("A story, a song or an unfinished poem.", "एक कहानी, एक गीत या अधूरी कविता।")}</small></span>${icon("arrow")}</button><p class="prototype-label">${t("Self-reflection, not treatment. Internal testing prototype.", "आत्म-चिंतन, उपचार नहीं। आंतरिक परीक्षण प्रोटोटाइप।")}</p>`;
 }
@@ -263,33 +258,34 @@ function content() {
   if (
     page === "reflection" &&
     state.entries.length >= 7 &&
-    riskSignal(state.entries.map((e) => e.text).join("\n"))
+    (riskSignal(state.entries.map((e) => e.text).join("\n")) ||
+      state.entries.some(hasJournalSafetyChoice))
   )
     return weeklyThemes(featureContext());
   switch (page) {
     case "welcome":
-      return `<div class="welcome-art" aria-hidden="true"><span class="notebook-mark">${icon("journal")}</span><span class="edition-label">SAATH / 01</span></div><div class="eyebrow">${t("YOUR PERSONAL NOTEBOOK", "आपकी अपनी डायरी")}</div><h1>${t("Some days are easier<br>to write about.", "कुछ दिन लिखकर<br>समझ आते हैं।")}</h1><p>${t("A notebook for whatever is on your mind. Start with a few words, or try a story, song or poem.", "मन में जो है, उसके लिए एक डायरी। कुछ शब्द लिखें, या कहानी, गीत और कविता से शुरुआत करें।")}</p><div class="card"><h2>${t("Before we begin", "शुरू करने से पहले")}</h2><p>${t("This is an early wellness prototype for adults 18+. It is not therapy, diagnosis, medical advice, or a monitored crisis service.", "यह 18+ वयस्कों के लिए शुरुआती वेलनेस प्रोटोटाइप है। यह थेरेपी, निदान, चिकित्सा सलाह या निगरानी वाली संकट सेवा नहीं है।")}</p><p class="notice">${t("Your writing stays in this app on this device. This prototype does not provide app-level encrypted storage. Anyone with device/app access may read it. Do not enter sensitive details on a shared device. No ads or analytics. An optional account sends authentication requests to Supabase; notebook data is uploaded only through the separate encrypted-backup flow. Clearing app data or uninstalling may erase your journal.", "आपकी लिखावट इसी डिवाइस के ऐप में रहती है। इस प्रोटोटाइप में ऐप-स्तर एन्क्रिप्शन नहीं है। डिवाइस/ऐप तक पहुँच वाला व्यक्ति इसे पढ़ सकता है। साझा डिवाइस पर संवेदनशील बातें न लिखें। विज्ञापन या एनालिटिक्स नहीं हैं। वैकल्पिक खाता Supabase को प्रमाणीकरण अनुरोध भेजता है; डायरी केवल अलग एन्क्रिप्टेड बैकअप विकल्प से अपलोड होती है। ऐप हटाने या डेटा साफ़ करने से डायरी मिट सकती है।")}</p>${button(t("I’m 18+ and agree to local storage", "मैं 18+ हूँ और स्थानीय स्टोरेज से सहमत हूँ"), "consent", "primary")}</div>${account.intro()}`;
+      return `<div class="welcome-art" aria-hidden="true"><span class="notebook-mark">${icon("journal")}</span><span class="edition-label">SAATH / 01</span></div><div class="eyebrow">${t("YOUR PERSONAL NOTEBOOK", "आपकी अपनी डायरी")}</div><h1>${t("Start with<br>a small check-in.", "शुरुआत करें<br>एक छोटे चेक-इन से।")}</h1><p>${t("Pick what fits, or add a note if you want. You can also try a story, song or poem.", "जो लागू हो चुनें, या चाहें तो एक नोट जोड़ें। कहानी, गीत या कविता भी आज़मा सकते हैं।")}</p><div class="card"><h2>${t("Before we begin", "शुरू करने से पहले")}</h2><p>${t("This is an early wellness prototype for adults 18+. It is not therapy, diagnosis, medical advice, or a monitored crisis service.", "यह 18+ वयस्कों के लिए शुरुआती वेलनेस प्रोटोटाइप है। यह थेरेपी, निदान, चिकित्सा सलाह या निगरानी वाली संकट सेवा नहीं है।")}</p><p class="notice">${t("Your writing stays in this app on this device. This prototype does not provide app-level encrypted storage. Anyone with device/app access may read it. Do not enter sensitive details on a shared device. No ads or analytics. An optional account sends authentication requests to Supabase; notebook data is uploaded only through the separate encrypted-backup flow. Clearing app data or uninstalling may erase your journal.", "आपकी लिखावट इसी डिवाइस के ऐप में रहती है। इस प्रोटोटाइप में ऐप-स्तर एन्क्रिप्शन नहीं है। डिवाइस/ऐप तक पहुँच वाला व्यक्ति इसे पढ़ सकता है। साझा डिवाइस पर संवेदनशील बातें न लिखें। विज्ञापन या एनालिटिक्स नहीं हैं। वैकल्पिक खाता Supabase को प्रमाणीकरण अनुरोध भेजता है; डायरी केवल अलग एन्क्रिप्टेड बैकअप विकल्प से अपलोड होती है। ऐप हटाने या डेटा साफ़ करने से डायरी मिट सकती है।")}</p>${button(t("I’m 18+ and agree to local storage", "मैं 18+ हूँ और स्थानीय स्टोरेज से सहमत हूँ"), "consent", "primary")}</div>${account.intro()}`;
     case "home":
       return renderHome();
     case "journal": {
       const entry = today();
       if (state.entries.length >= 7 && !entry)
         return `<h1>${t("Your seven days are here.", "आपके सात दिन पूरे हो गए।")}</h1><p>${t("Take a moment to revisit your week. A new journal cycle is not yet available in this prototype.", "अपने सप्ताह को फिर से देखें। इस प्रोटोटाइप में नया चक्र अभी उपलब्ध नहीं है।")}</p>${button(t("View reflection", "चिंतन देखें"), "reflection", "primary")}`;
-      const index = entry
-        ? state.entries.indexOf(entry)
-        : Math.min(state.entries.length, 6);
-      return `<div class="eyebrow">${t("Day", "दिन")} ${index + 1} / 7</div><h1>${prompts[index][hi() ? 1 : 0]}</h1><p class="muted">${t("Write as much or as little as you want. Your draft saves as you go.", "जितना चाहें, उतना लिखें। लिखते समय ड्राफ़्ट सेव होता रहता है।")}</p><label for="entry">${t("Your words", "आपके शब्द")}</label><textarea id="entry" maxlength="12000" placeholder="${t("Start wherever you are…", "जहाँ हैं, वहीं से शुरू करें…")}">${escape(state.draft ?? entry?.text ?? "")}</textarea><div id="status" class="status" role="status">${state.draft ? t("Draft saved on this device", "ड्राफ़्ट इस डिवाइस पर सेव है") : t("Only stored on this device.", "केवल इस डिवाइस पर सेव होगा।")}</div><div class="row">${button(t("Save today’s entry", "आज का पन्ना सेव करें"), "save", "primary")}${button(t("Not right now", "अभी नहीं"), "home", "quiet")}</div><p class="notice">${t("Your words are not monitored. Limited local safety-word matching can miss or misread signals. If you need urgent support, open Get help.", "आपके शब्दों की निगरानी नहीं होती। सीमित स्थानीय सुरक्षा शब्द-मिलान संकेत चूक या गलत समझ सकता है। तुरंत सहायता चाहिए तो मदद खोलें।")}</p>`;
+      const index = journalDay(state, date());
+      const question = dailyQuestions[index],
+        ids = journalSelection(state, index, entry);
+      return `<div class="eyebrow">${t("Day", "दिन")} ${index + 1} / 7</div><h1>${prompts[index][hi() ? 1 : 0]}</h1><p class="muted">${t(question.single ? "Pick one. Tap it again to clear. Typing is optional." : "Pick all that fit. Tap again to clear. Typing is optional.", question.single ? "एक चुनें। हटाने के लिए फिर दबाएँ। लिखना वैकल्पिक है।" : "जो लागू हों, सब चुनें। हटाने के लिए फिर दबाएँ। लिखना वैकल्पिक है।")}</p>${choiceButtons(ids, question.options, featureContext(), "journal-choice", question.single)}<details class="optional-note" ${(state.draft ?? entry?.text) ? "open" : ""}><summary>${t("Add a note (optional)", "एक नोट जोड़ें (वैकल्पिक)")}</summary><label for="entry">${t("Anything to add? (optional)", "कुछ जोड़ना चाहेंगे? (वैकल्पिक)")}</label><textarea id="entry" maxlength="12000" placeholder="${t("Start wherever you are…", "जहाँ हैं, वहीं से शुरू करें…")}">${escape(state.draft ?? entry?.text ?? "")}</textarea></details><div id="status" class="status" role="status">${state.draft ? t("Draft saved on this device", "ड्राफ़्ट इस डिवाइस पर सेव है") : t("Local notebook. Cloud backup is a separate action.", "स्थानीय डायरी। क्लाउड बैकअप के लिए अलग कार्रवाई करनी होगी।")}</div><div class="row">${button(t("Save today’s entry", "आज का पन्ना सेव करें"), "save", "primary")}${button(t("Not right now", "अभी नहीं"), "home", "quiet")}</div><p class="notice">${t("Choices and notes stay on this device until you explicitly create an encrypted cloud backup from Account & backup. The Day 5 support rule awaits psychologist review. Your words are not monitored. Limited local safety-word matching can miss or misread signals. If you need urgent support, open Get help.", "खाता और बैकअप से एन्क्रिप्टेड क्लाउड बैकअप बनाने तक चुनाव और नोट इसी डिवाइस पर रहते हैं। दिन 5 के सहायता नियम की मनोवैज्ञानिक समीक्षा बाकी है। आपके शब्दों की निगरानी नहीं होती। सीमित स्थानीय सुरक्षा शब्द-मिलान संकेत चूक या गलत समझ सकता है। तुरंत सहायता चाहिए तो मदद खोलें।")}</p>${button(account.getUser() ? t("Account & cloud backup", "खाता और क्लाउड बैकअप") : t("Sign in for cloud backup", "क्लाउड बैकअप के लिए साइन इन"), account.getUser() ? "account" : "login", "quiet wide")}`;
     }
     case "reflection":
       return state.entries.length < 7
         ? `<h1>${t("A little more time", "थोड़ा और समय")}</h1><p>${t("Your reflection opens after seven completed days.", "सात दिन पूरे होने पर चिंतन खुलेगा।")}</p>`
-        : `<div class="eyebrow">${t("Your week, in your words", "आपका सप्ताह, आपके शब्दों में")}</div><h1>${t("You made space<br>for yourself.", "आपने अपने लिए<br>जगह बनाई।")}</h1><p>${t("A private review with simple, tentative word-match themes—not AI analysis or a clinical assessment. Only you decide what fits.", "यह निजी समीक्षा और साधारण संभावित शब्द-मिलान विषय हैं—AI विश्लेषण या क्लिनिकल मूल्यांकन नहीं। क्या सही लगता है, आप तय करें।")}</p>${weeklyThemes(featureContext())}${state.entries.map((e, i) => `<details class="card"><summary>${t("Day", "दिन")} ${i + 1} · ${escape(e.date)}</summary><p style="white-space:pre-wrap">${escape(e.text)}</p></details>`).join("")}<div class="card hero"><h2>${t("What do you notice?", "आप क्या देख पा रहे हैं?")}</h2><p>${t("Was there a feeling or situation that returned? Was there one moment of comfort? It is okay if nothing stands out.", "क्या कोई भावना या परिस्थिति बार-बार आई? क्या कोई सुकून का पल था? कुछ अलग न दिखे तो भी ठीक है।")}</p><h2>${t("An optional small step", "एक वैकल्पिक छोटा कदम")}</h2><p>${t("If it feels comfortable, name one kind, manageable action for tomorrow. You can skip this. These prompts have not yet had clinical review.", "सहज लगे तो कल के लिए एक छोटा, दयालु कदम सोचें। इसे छोड़ सकते हैं। इन प्रश्नों की अभी क्लिनिकल समीक्षा नहीं हुई है।")}</p></div><p>${t("If things feel persistently difficult, consider speaking with a qualified mental-health professional.", "अगर कठिनाई बनी हुई है, योग्य मानसिक स्वास्थ्य पेशेवर से बात करने पर विचार करें।")}</p>`;
+        : `<div class="eyebrow">${t("Your week, in your words", "आपका सप्ताह, आपके शब्दों में")}</div><h1>${t("You made space<br>for yourself.", "आपने अपने लिए<br>जगह बनाई।")}</h1><p>${t("A private review with simple, tentative word-match themes—not AI analysis or a clinical assessment. Only you decide what fits.", "यह निजी समीक्षा और साधारण संभावित शब्द-मिलान विषय हैं—AI विश्लेषण या क्लिनिकल मूल्यांकन नहीं। क्या सही लगता है, आप तय करें।")}</p>${weeklyThemes(featureContext())}${state.entries.map((e, i) => `<details class="card"><summary>${t("Day", "दिन")} ${i + 1} · ${escape(e.date)}</summary><p style="white-space:pre-wrap">${escape(journalSummary(e, i, state.lang))}</p></details>`).join("")}<div class="card hero"><h2>${t("What do you notice?", "आप क्या देख पा रहे हैं?")}</h2><p>${t("Was there a feeling or situation that returned? Was there one moment of comfort? It is okay if nothing stands out.", "क्या कोई भावना या परिस्थिति बार-बार आई? क्या कोई सुकून का पल था? कुछ अलग न दिखे तो भी ठीक है।")}</p><h2>${t("An optional small step", "एक वैकल्पिक छोटा कदम")}</h2><p>${t("If it feels comfortable, name one kind, manageable action for tomorrow. You can skip this. These prompts have not yet had clinical review.", "सहज लगे तो कल के लिए एक छोटा, दयालु कदम सोचें। इसे छोड़ सकते हैं। इन प्रश्नों की अभी क्लिनिकल समीक्षा नहीं हुई है।")}</p></div><p>${t("If things feel persistently difficult, consider speaking with a qualified mental-health professional.", "अगर कठिनाई बनी हुई है, योग्य मानसिक स्वास्थ्य पेशेवर से बात करने पर विचार करें।")}</p>`;
     case "panic":
       return `<div class="eyebrow">${t("One moment at a time", "एक बार में एक पल")}</div><h1>${t("One thing<br>at a time.", "एक बार में<br>एक चीज़।")}</h1><p class="notice">${t("Chest pain, severe breathing difficulty, or a possible medical emergency? Seek emergency medical care now. Do not assume it is panic.", "सीने में दर्द, साँस लेने में गंभीर परेशानी या संभावित चिकित्सा आपातस्थिति? तुरंत आपात चिकित्सा सहायता लें। इसे केवल घबराहट न मानें।")}</p>${tool ? exercise() : `<div class="card"><h2>${t("Choose what feels okay", "जो सहज लगे, चुनें")}</h2><div class="calm-options">${button(icon("panic") + `<span>${t("Slow breathing", "धीरे साँस")}</span>` + icon("arrow"), "breath")}${button(icon("sun") + `<span>${t("5–4–3–2–1 grounding", "5–4–3–2–1 ग्राउंडिंग")}</span>` + icon("arrow"), "ground")}${button(icon("journal") + `<span>${t("Count backwards", "उलटी गिनती")}</span>` + icon("arrow"), "count")}</div><p>${t("These optional exercises are not treatment. Stop if uncomfortable.", "ये वैकल्पिक अभ्यास उपचार नहीं हैं। असहज लगे तो रोक दें।")}</p></div>`}<div class="card"><h2>${t("You can reach out", "आप बात कर सकते हैं")}</h2>${contactLink()}${button(t("Crisis & emergency help", "संकट और आपात मदद"), "crisis", "help")}</div>`;
     case "crisis":
       return `<div class="eyebrow">${t("Support right now", "अभी सहायता")}</div><h1>${t("Your safety matters.", "आपकी सुरक्षा ज़रूरी है।")}</h1><p>${t("If you may hurt yourself, someone else, or cannot stay safe, contact local emergency services or go to the nearest emergency department. If possible, move near someone you trust and away from things you could use to harm yourself.", "अगर आप खुद को या किसी और को नुकसान पहुँचा सकते हैं, या सुरक्षित नहीं रह सकते, स्थानीय आपात सेवा से संपर्क करें या नज़दीकी आपात विभाग जाएँ। संभव हो तो किसी भरोसेमंद व्यक्ति के पास जाएँ और नुकसान पहुँचाने वाली चीज़ों से दूर रहें।")}</p><div class="card"><h2>${t("Ask someone to stay with you", "किसी को अपने साथ रहने को कहें")}</h2>${contactLink()}<p>${t("In India: 112 for emergency assistance; Tele-MANAS 14416 for mental-health support. Outside India, use your local emergency service. Calls require phone service and are never placed automatically.", "भारत में: आपात सहायता के लिए 112; मानसिक स्वास्थ्य सहायता के लिए टेली-मानस 14416। भारत के बाहर स्थानीय आपात सेवा का उपयोग करें। कॉल के लिए फ़ोन सेवा चाहिए; कॉल अपने आप नहीं लगती।")}</p><div class="resource-links"><a class="danger call-button" href="tel:112">${t("Call emergency · 112", "आपात कॉल · 112")}</a><a class="primary call-button" href="tel:14416">${t("Call Tele-MANAS · 14416", "टेली-मानस · 14416")}</a></div><small>${t("India · official web listings checked 7 Nov 2026, not call-tested. Availability may vary.", "भारत · आधिकारिक वेब सूची 7 नवम्बर 2026 को जाँची; कॉल-परीक्षण नहीं। उपलब्धता बदल सकती है।")}</small><p><a href="https://112.gov.in/about" target="_blank" rel="noopener noreferrer">112 · official source</a> · <a href="https://dghs.mohfw.gov.in/national-mental-health-programme.php" target="_blank" rel="noopener noreferrer">Tele-MANAS · official source</a></p></div><p class="notice">${t("Saath is not monitored, cannot contact responders, and cannot reliably detect crises. Local word matching can miss signals or get them wrong. Nobody has been notified. Do not wait for a reply from this app.", "साथ की निगरानी नहीं होती, यह सहायता सेवाओं से संपर्क या भरोसेमंद संकट पहचान नहीं कर सकता। स्थानीय शब्द-मिलान संकेत चूक या गलत समझ सकता है। किसी को सूचित नहीं किया गया है। इस ऐप के जवाब का इंतज़ार न करें।")}</p>${button(t("Back to calming tools", "शांत होने के अभ्यास"), "panic", "quiet")}`;
     case "settings":
-      return `<h1>${t("Make yourself<br>at home.", "अपनी जगह,<br>अपने तरीके से।")}</h1>${account.settingsCard()}<div class="card"><h2>${t("Trusted person", "भरोसेमंद व्यक्ति")}</h2><p>${t("Optional. Add a number without sharing your contacts. Tapping Call opens your dialler; you decide whether to call.", "वैकल्पिक। कॉन्टैक्ट साझा किए बिना नंबर जोड़ें। कॉल दबाने से डायलर खुलता है; कॉल करना आप तय करते हैं।")}</p><label for="phone">${t("Phone number", "फ़ोन नंबर")}</label><input id="phone" type="tel" maxlength="20" value="${escape(contactDraft ?? state.phone ?? "")}" autocomplete="off">${button(t("Save contact", "नंबर सेव करें"), "contact", "primary")} ${button(t("Cancel changes", "बदलाव रद्द करें"), "cancel-contact", "quiet")}<p id="status" role="status"></p></div><div class="card"><h2>${t("Privacy & prototype limits", "गोपनीयता और सीमाएँ")}</h2><p>${t("Writing is stored locally without app-level encryption. Accounts use Supabase Auth and this device stores a sign-in session. Optional cloud backups are encrypted with your separate passphrase before upload. No ads, analytics or remote AI. Android app backup is disabled.", "लिखावट स्थानीय है, ऐप-स्तर एन्क्रिप्शन के बिना। खाते Supabase Auth उपयोग करते हैं और डिवाइस साइन-इन सत्र रखता है। वैकल्पिक क्लाउड बैकअप अपलोड से पहले आपकी अलग पासफ़्रेज़ से एन्क्रिप्ट होते हैं। विज्ञापन, एनालिटिक्स या रिमोट AI नहीं। Android ऐप बैकअप बंद है।")}</p><p>${t("Not clinically reviewed. Local safety word matching is incomplete, and optional English screening is not a diagnosis. No automatic cloud sync, remote AI, or new journal cycles. Do not rely on this prototype for urgent support.", "क्लिनिकल समीक्षा नहीं हुई है। स्थानीय सुरक्षा शब्द-मिलान अधूरा है; वैकल्पिक अंग्रेज़ी स्क्रीनिंग निदान नहीं है। अपने आप क्लाउड सिंक, रिमोट AI या नए डायरी चक्र नहीं हैं। तुरंत सहायता के लिए इस प्रोटोटाइप पर निर्भर न रहें।")}</p>${button(account.getUser() ? t("Delete notebook & cloud backup", "डायरी और क्लाउड बैकअप मिटाएँ") : t("Delete all my data", "मेरा सारा डेटा मिटाएँ"), "delete", "danger")}</div><small>Saath 0.5.1 · ${t("Internal testing prototype · 18+", "आंतरिक परीक्षण प्रोटोटाइप · 18+")}</small>`;
+      return `<h1>${t("Make yourself<br>at home.", "अपनी जगह,<br>अपने तरीके से।")}</h1>${account.settingsCard()}<div class="card"><h2>${t("Trusted person", "भरोसेमंद व्यक्ति")}</h2><p>${t("Optional. Add a number without sharing your contacts. Tapping Call opens your dialler; you decide whether to call.", "वैकल्पिक। कॉन्टैक्ट साझा किए बिना नंबर जोड़ें। कॉल दबाने से डायलर खुलता है; कॉल करना आप तय करते हैं।")}</p><label for="phone">${t("Phone number", "फ़ोन नंबर")}</label><input id="phone" type="tel" maxlength="20" value="${escape(contactDraft ?? state.phone ?? "")}" autocomplete="off">${button(t("Save contact", "नंबर सेव करें"), "contact", "primary")} ${button(t("Cancel changes", "बदलाव रद्द करें"), "cancel-contact", "quiet")}<p id="status" role="status"></p></div><div class="card"><h2>${t("Privacy & prototype limits", "गोपनीयता और सीमाएँ")}</h2><p>${t("Writing is stored locally without app-level encryption. Accounts use Supabase Auth and this device stores a sign-in session. Optional cloud backups are encrypted with your separate passphrase before upload. No ads, analytics or remote AI. Android app backup is disabled.", "लिखावट स्थानीय है, ऐप-स्तर एन्क्रिप्शन के बिना। खाते Supabase Auth उपयोग करते हैं और डिवाइस साइन-इन सत्र रखता है। वैकल्पिक क्लाउड बैकअप अपलोड से पहले आपकी अलग पासफ़्रेज़ से एन्क्रिप्ट होते हैं। विज्ञापन, एनालिटिक्स या रिमोट AI नहीं। Android ऐप बैकअप बंद है।")}</p><p>${t("Not clinically reviewed. Local safety word matching is incomplete, and optional English screening is not a diagnosis. No automatic cloud sync, remote AI, or new journal cycles. Do not rely on this prototype for urgent support.", "क्लिनिकल समीक्षा नहीं हुई है। स्थानीय सुरक्षा शब्द-मिलान अधूरा है; वैकल्पिक अंग्रेज़ी स्क्रीनिंग निदान नहीं है। अपने आप क्लाउड सिंक, रिमोट AI या नए डायरी चक्र नहीं हैं। तुरंत सहायता के लिए इस प्रोटोटाइप पर निर्भर न रहें।")}</p>${button(account.getUser() ? t("Delete notebook & cloud backup", "डायरी और क्लाउड बैकअप मिटाएँ") : t("Delete all my data", "मेरा सारा डेटा मिटाएँ"), "delete", "danger")}</div><small>Saath 0.6.0 · ${t("Internal testing prototype · 18+", "आंतरिक परीक्षण प्रोटोटाइप · 18+")}</small>`;
   }
 }
 function contactLink() {
@@ -365,29 +361,73 @@ function act(a) {
     render();
     window.scrollTo(0, 0);
   }
+  if (a.startsWith("journal-choice:")) {
+    if (page !== "journal") return;
+    const index = journalDay(state, date()),
+      question = dailyQuestions[index],
+      id = a.slice(15);
+    if (!question.options.some((o) => o.id === id)) return;
+    const previous = JSON.stringify(state);
+    const ids = toggleOption(
+      journalSelection(state, index, today()),
+      id,
+      question.options,
+      question.single,
+    );
+    state.draft = root.querySelector("#entry").value;
+    state.journalChoices = { day: index + 1, optionIds: ids };
+    const safety = index === 4 && ids.includes("disappear");
+    const ok = persist();
+    if (!ok) state = JSON.parse(previous);
+    if (safety) {
+      go("crisis");
+      return;
+    }
+    render();
+    root.querySelector("#status").textContent = ok
+      ? t(
+          "Choice saved on this device. Save today to finish this day.",
+          "चुनाव इस डिवाइस पर सेव है। दिन पूरा करने के लिए आज का पन्ना सेव करें।",
+        )
+      : t(
+          "Could not save your choice. Free device space and retry.",
+          "चुनाव सेव नहीं हुआ। डिवाइस में जगह खाली करके फिर कोशिश करें।",
+        );
+    return;
+  }
   if (a === "save") {
     const value = root.querySelector("textarea").value.trim();
-    if (!value)
+    const index = journalDay(state, date()),
+      ids = journalSelection(state, index, today());
+    if (!value && !ids.length)
       return (root.querySelector("#status").textContent = t(
-        "Write a few words first, or return later.",
-        "कुछ शब्द लिखें, या बाद में आएँ।",
+        "Pick an option or add a few words first, or return later.",
+        "पहले कोई विकल्प चुनें या कुछ शब्द जोड़ें, या बाद में आएँ।",
       ));
     const previous = JSON.stringify(state);
     const e = today();
-    if (e) e.text = value;
-    else if (state.entries.length < 7)
-      state.entries.push({ date: date(), text: value });
+    const saved = {
+      date: date(),
+      text: value,
+      day: index + 1,
+      optionIds: [...ids],
+      questionVersion: 1,
+    };
+    if (e) Object.assign(e, saved);
+    else if (state.entries.length < 7) state.entries.push(saved);
+    const safety = hasJournalSafetyChoice(saved) || riskSignal(value);
     delete state.draft;
+    delete state.journalChoices;
     if (!persist()) {
       state = JSON.parse(previous);
       root.querySelector("#status").textContent = t(
         "Could not save. Free some device space and retry.",
         "सेव नहीं हुआ। जगह खाली करके फिर कोशिश करें।",
       );
-      if (riskSignal(value)) go("crisis");
+      if (safety) go("crisis");
       return;
     }
-    go(riskSignal(value) ? "crisis" : "home");
+    go(safety ? "crisis" : "home");
   }
   if (["breath", "ground", "count"].includes(a)) {
     navigate("panic", a);

@@ -1,4 +1,4 @@
-# PDF feature coverage · Saath 0.5.0
+# PDF feature coverage · Saath 0.6.0
 
 Source: user-provided `Saath_Idea_Summary.pdf` (November 2026). This is a prototype implementation map, **not** a claim that clinical or legal approval has been obtained.
 
@@ -8,7 +8,7 @@ Source: user-provided `Saath_Idea_Summary.pdf` (November 2026). This is a protot
 | Song + user's own words | Optional title/artist/link; explanation field; only explanation is analysed | No audio, playback or lyrics retrieval; rules do not infer meaning from title/artist |
 | Poem / missing line | Original bilingual poem and open completion/response | One poem; content review pending |
 | Emotional themes | Local English/Hindi keyword rules, word evidence, tentative language, theme rejection | **Not AI or semantic understanding.** Negations and context may be misread; no clinical claims |
-| Seven-day journal | One completion per local date; draft recovery; optional prompts; no missed-day penalty | One cycle; device date affects progress |
+| Seven-day journal | Day 1 single-select, Days 2–7 multi-select; optional notes; same-day edits; choice draft recovery; one completion per local date; no missed-day penalty | One cycle; device date affects progress; choice wording and Day 5 immediate crisis rule await psychologist/native-speaker review |
 | Weekly reflection | Themes across entries, original entries, user-chosen positive-day excerpts, optional exercise | No invented positive moments or causal interpretations; risk matches suppress ordinary reflection |
 | Panic button | Persistent Calm tab; offline breathing, grounding and back-counting | Device testing and clinical review pending; no guarantee of relief |
 | Medical emergency warning | Chest pain/severe breathing guidance; emergency call action | Do not label medical symptoms “just panic” |
@@ -52,3 +52,7 @@ PHQ/GAD instruments were developed by Spitzer, Williams, Kroenke and colleagues.
 ## Release blockers
 
 Clinical approval of all content, instrument implementation and safety rules; Hindi/native-speaker review; secure storage/key-lifecycle design and audit; DPDP and vendor/legal review; device/accessibility QA; verified resource ownership and calling checks; incident-response process; controlled adult pilot and retention/helpfulness evaluation. Passing automated fixtures is not evidence of guaranteed crisis detection or therapeutic benefit.
+
+## 0.6.0 additions
+
+Story/Song/Poem cards now open sourced research/participation bars before the activity. All three activities accept tap-only answers; notes are optional. Published activity statistics are not evidence of treatment or a comparable preference ranking. All structured selections and drafts are included in the existing private encrypted account backup, not a public response table. See [sources and review gates](RESEARCH_AND_CHOICES.md).

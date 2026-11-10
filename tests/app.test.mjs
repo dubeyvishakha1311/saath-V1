@@ -1,5 +1,6 @@
 import { createAccountController, accountPages } from "../src/account.js";
 import * as features from "../src/features.js";
+import * as journal from "../src/journal.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -10,16 +11,20 @@ const source = readFileSync(new URL("../src/main.js", import.meta.url), "utf8")
     "",
   )
   .replace(
-    /import\s*\{[\s\S]*?\}\s*from\s*['"]\.\/features\.js['"];?/,
+    /import\s*\{[^}]*\}\s*from\s*['"]\.\/features\.js['"];?/,
     "const { extraPages, renderExtra, bindExtra, handleExtra, riskSignal, weeklyThemes } = window.__features;",
   )
   .replace(
-    /import\s*\{[\s\S]*?\}\s*from\s*['"]\.\/account\.js['"];?/,
+    /import\s*\{[^}]*\}\s*from\s*['"]\.\/account\.js['"];?/,
     "const {createAccountController,accountPages}=window.__account;",
   )
   .replace(
-    /import\s*\{[\s\S]*?\}\s*from\s*['"]\.\/supabase\.js['"];?/,
+    /import\s*\{[^}]*\}\s*from\s*['"]\.\/supabase\.js['"];?/,
     'const supabase=window.__supabase;const authRedirectURL=()=>"https://saath.test/?auth=callback";const listenForNativeAuth=async()=>{};const authCallbackFailed=()=>false;const startGoogleSignIn=async()=>{window.__googleCalls=(window.__googleCalls||0)+1;if(window.__googleError)throw window.__googleError;};',
+  )
+  .replace(
+    /import\s*\{[^}]*\}\s*from\s*['"]\.\/journal\.js['"];?/,
+    "const {dailyQuestions,journalDay,journalSelection,hasJournalSafetyChoice,journalSummary,choiceButtons,toggleOption}=window.__journal;",
   );
 
 function app(saved, client = null) {
@@ -29,6 +34,7 @@ function app(saved, client = null) {
   });
   const w = dom.window;
   w.__features = features;
+  w.__journal = journal;
   w.__account = { createAccountController, accountPages };
   w.__supabase = client;
   w.scrollTo = () => {};
@@ -251,6 +257,7 @@ test("journal drafts and contact edits survive Back; Cancel restores saved conta
 test("story and poem save, reflect, reject themes, recover drafts and escape user text", () => {
   const a = app({ consent: true, lang: "en", entries: [] });
   a.click("explore");
+  a.click("research-story");
   a.click("story");
   const field = a.doc.querySelector("#response");
   field.value = "I felt lonely and tired <img src=x onerror=alert(1)>";
@@ -266,6 +273,7 @@ test("story and poem save, reflect, reject themes, recover drafts and escape use
   a.click(`reject:${id}:connection`);
   assert.doesNotMatch(a.doc.body.textContent, /Connection or loneliness/);
   a.click("explore");
+  a.click("research-poem");
   a.click("poem");
   a.doc.querySelector("#response").value = "hope for tomorrow";
   a.click("reflect:poem");
@@ -278,6 +286,7 @@ test("story and poem save, reflect, reject themes, recover drafts and escape use
 test("song metadata never drives themes; only user-authored explanation is reflected", () => {
   const a = app({ consent: true, lang: "en", entries: [] });
   a.click("explore");
+  a.click("research-song");
   a.click("song");
   const title = a.doc.querySelector("#song-title");
   title.value = "Lonely sad worried tired";
@@ -298,6 +307,8 @@ test("risky story, song, poem, exercise and journal answers route to crisis; ret
       a.click("exercise:kindness");
     } else if (route !== "journal") {
       a.click("explore");
+      if (["story", "song", "poem"].includes(route))
+        a.click("research-" + route);
       a.click(route);
     } else a.click("journal");
     const field = a.doc.querySelector("textarea");
@@ -839,5 +850,232 @@ test("Google sign-in appears on login/signup, requires separate consent and neve
     a.doc.querySelector("[data-action=google-signin]").textContent,
     /Google से/,
   );
+  a.close();
+});
+
+test("all seven journal days save without typing: Day 1 single, Days 2–7 multi; edits preserve IDs", () => {
+  for (let day = 1; day <= 7; day++) {
+    const a = app({
+      consent: true,
+      lang: "en",
+      entries: Array.from({ length: day - 1 }, (_, i) => ({
+        date: `2000-01-0${i + 1}`,
+        text: "Earlier day",
+      })),
+    });
+    a.click("journal");
+    const options = journal.dailyQuestions[day - 1].options;
+    assert.equal(a.doc.querySelectorAll(".tap-option").length, options.length);
+    a.click(`journal-choice:${options[0].id}`);
+    a.click(`journal-choice:${options[1].id}`);
+    assert.equal(
+      a.doc.querySelectorAll(".tap-option[aria-pressed=true]").length,
+      day === 1 ? 1 : 2,
+    );
+    assert.equal(a.doc.querySelector("#entry").value, "");
+    a.click("language");
+    assert.equal(
+      a.doc.querySelectorAll(".tap-option[aria-pressed=true]").length,
+      day === 1 ? 1 : 2,
+    );
+    a.click("save");
+    const saved = a.data().entries.at(-1);
+    assert.equal(saved.text, "");
+    assert.equal(saved.day, day);
+    assert.equal(saved.questionVersion, 1);
+    assert.deepEqual(
+      saved.optionIds,
+      day === 1 ? [options[1].id] : [options[0].id, options[1].id],
+    );
+    assert.equal(a.data().journalChoices, undefined);
+    a.click("journal");
+    assert.equal(
+      a.doc.querySelectorAll(".tap-option[aria-pressed=true]").length,
+      day === 1 ? 1 : 2,
+    );
+    a.click("save");
+    assert.equal(a.data().entries.length, day);
+    a.close();
+  }
+});
+test("journal selection drafts recover; deselection, exclusive choices, notes and storage failures are safe", () => {
+  const a = app({
+    consent: true,
+    lang: "en",
+    entries: [{ date: "2000-01-01", text: "Earlier" }],
+  });
+  a.click("journal");
+  a.click("journal-choice:work");
+  a.click("journal-choice:health");
+  a.doc.querySelector("#entry").value = "Optional detail";
+  a.doc.querySelector("#entry").dispatchEvent(new a.w.Event("input"));
+  a.click("home");
+  a.click("journal");
+  assert.equal(a.doc.querySelector("#entry").value, "Optional detail");
+  assert.equal(a.doc.querySelectorAll("[aria-pressed=true]").length, 2);
+  const reload = app(a.data());
+  reload.click("journal");
+  assert.equal(reload.doc.querySelectorAll(".tap-option.selected").length, 2);
+  reload.close();
+  a.click("journal-choice:nothing");
+  assert.deepEqual(a.data().journalChoices.optionIds, ["nothing"]);
+  a.click("journal-choice:health");
+  assert.deepEqual(a.data().journalChoices.optionIds, ["health"]);
+  a.click("journal-choice:health");
+  assert.deepEqual(a.data().journalChoices.optionIds, []);
+  a.w.Storage.prototype.setItem = () => {
+    throw Error("full");
+  };
+  a.click("journal-choice:work");
+  assert.equal(a.doc.querySelectorAll(".tap-option.selected").length, 0);
+  assert.match(a.doc.querySelector("#status").textContent, /Could not save/);
+  a.close();
+});
+test("Day 5 disappearance option opens crisis immediately, including in Hindi and when storage fails", () => {
+  for (const lang of ["en", "hi"])
+    for (const fail of [false, true]) {
+      const a = app({
+        consent: true,
+        lang,
+        entries: Array.from({ length: 4 }, (_, i) => ({
+          date: `2000-01-0${i + 1}`,
+          text: "Earlier",
+        })),
+      });
+      a.click("journal");
+      if (fail)
+        a.w.Storage.prototype.setItem = () => {
+          throw Error("full");
+        };
+      a.click("journal-choice:disappear");
+      assert.equal(a.doc.querySelector(".app-shell").dataset.page, "crisis");
+      assert.ok(a.doc.querySelector('a[href="tel:14416"]'));
+      assert.ok(a.doc.querySelector('a[href="tel:112"]'));
+      assert.equal(a.w.__notebookTest().entries.length, 4);
+      if (!fail) {
+        a.click("back");
+        a.click("save");
+        assert.equal(a.doc.querySelector(".app-shell").dataset.page, "crisis");
+        assert.deepEqual(a.data().entries.at(-1).optionIds, ["disappear"]);
+      }
+      a.close();
+    }
+});
+test("saved Day 5 safety selections suppress ordinary weekly reflection without relying on text", () => {
+  const a = app({
+    consent: true,
+    lang: "en",
+    entries: Array.from({ length: 7 }, (_, i) => ({
+      date: `2000-01-0${i + 1}`,
+      text: "",
+      ...(i === 4
+        ? { day: 5, optionIds: ["disappear"], questionVersion: 1 }
+        : {}),
+    })),
+  });
+  a.click("reflection");
+  assert.match(a.doc.body.textContent, /put support first/);
+  assert.doesNotMatch(
+    a.doc.body.textContent,
+    /Possible emotional themes|Positive moments/,
+  );
+  a.close();
+});
+test("each creative card opens sourced participation bars before a tap-only activity", () => {
+  for (const type of ["story", "song", "poem"]) {
+    const a = app({ consent: true, lang: "en", entries: [] });
+    a.click("explore");
+    a.click(`research-${type}`);
+    assert.equal(
+      a.doc.querySelector(".app-shell").dataset.page,
+      `research-${type}`,
+    );
+    assert.equal(a.doc.querySelectorAll("meter").length, 3);
+    assert.deepEqual(
+      [...a.doc.querySelectorAll("meter")].map((x) => Number(x.value)),
+      [73, 37.6, 9.2],
+    );
+    assert.equal(a.doc.querySelectorAll(".research-source").length, 3);
+    assert.match(
+      a.doc.body.textContent,
+      /do not show.*treat anxiety or depression/,
+    );
+    assert.match(a.doc.body.textContent, /cannot rank preferences/);
+    a.click(type);
+    const id = journal.creativeOptions[type][0].id;
+    a.click(`creative-choice:${type}:${id}`);
+    a.click(`reflect:${type}`);
+    assert.equal(a.doc.querySelector(".app-shell").dataset.page, "experience");
+    assert.equal(a.data().experiences[0].text, "");
+    assert.deepEqual(a.data().experiences[0].optionIds, [id]);
+    assert.doesNotMatch(a.doc.body.textContent, /Possible emotional themes/);
+    a.click("explore");
+    a.click("history");
+    assert.ok(a.doc.querySelector(".history-item"));
+    a.close();
+  }
+});
+
+test("account backup/restore keeps all structured answers and drafts together as ciphertext, not public rows", async () => {
+  const sdk = fakeSupabase(),
+    a = app(
+      {
+        consent: true,
+        lang: "en",
+        entries: [
+          {
+            date: "2000-01-01",
+            text: "",
+            day: 1,
+            optionIds: ["mixed"],
+            questionVersion: 1,
+          },
+        ],
+        journalChoices: { day: 2, optionIds: ["work", "health"] },
+        featureChoices: { song: ["memories"] },
+        experiences: [
+          {
+            id: "a-story",
+            type: "story",
+            date: "2000-01-01",
+            text: "",
+            optionIds: ["asha"],
+            questionVersion: 1,
+          },
+        ],
+      },
+      sdk,
+    );
+  await signIn(a);
+  a.click("import-guest");
+  const expected = JSON.parse(JSON.stringify(a.w.__notebookTest()));
+  a.click("cloud");
+  async function transfer(kind) {
+    a.doc.querySelector("#vault-password").value = "separate backup passphrase";
+    a.doc.querySelector("#cloud-consent").checked = true;
+    a.doc
+      .querySelector("#account-form")
+      .dispatchEvent(
+        new a.w.SubmitEvent("submit", {
+          bubbles: true,
+          cancelable: true,
+          submitter: a.doc.querySelector(`button[value=${kind}]`),
+        }),
+      );
+    await settle(a);
+  }
+  await transfer("upload");
+  const row = sdk.getRow();
+  assert.ok(row.ciphertext);
+  assert.equal(Object.hasOwn(row, "journalChoices"), false);
+  assert.equal(JSON.stringify(row).includes("memories"), false);
+  a.w.__notebookTest().entries = [];
+  await transfer("restore");
+  assert.deepEqual(JSON.parse(JSON.stringify(a.w.__notebookTest())), expected);
+  assert.match(
+    a.doc.querySelector("#account-status").textContent,
+    /Backup restored/,
+  );
+  assert.equal(a.doc.querySelector("[data-action=back]").disabled, false);
   a.close();
 });

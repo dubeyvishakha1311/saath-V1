@@ -92,3 +92,64 @@ test("backup encryption uses fresh randomness and rejects unsupported/invalid in
     }),
   );
 });
+
+test("one encrypted notebook preserves journal and creative choice records/drafts and rejects unknown choice IDs", async () => {
+  const data = {
+    ...notebook,
+    entries: [
+      {
+        date: "2026-11-07",
+        text: "",
+        day: 1,
+        optionIds: ["mixed"],
+        questionVersion: 1,
+      },
+    ],
+    journalChoices: { day: 2, optionIds: ["work", "health"] },
+    featureChoices: { song: ["calm", "memories"] },
+    experiences: [
+      {
+        id: "story-1",
+        type: "story",
+        date: "2026-11-07",
+        text: "",
+        optionIds: ["asha"],
+        questionVersion: 1,
+      },
+    ],
+  };
+  const row = await encryptNotebook(
+    data,
+    "separate backup passphrase",
+    "account-a",
+    webcrypto,
+  );
+  assert.deepEqual(
+    await decryptNotebook(
+      row,
+      "separate backup passphrase",
+      "account-a",
+      webcrypto,
+    ),
+    data,
+  );
+  assert.equal(row.ciphertext.includes("memories"), false);
+  for (const patch of [
+    { journalChoices: { day: 1, optionIds: ["good", "mixed"] } },
+    { journalChoices: { day: 5, optionIds: ["not-a-choice"] } },
+    { featureChoices: { song: ["calm", "unsure"] } },
+    { featureChoices: { toString: [] } },
+    {
+      entries: [
+        {
+          date: "today",
+          text: "",
+          day: 9,
+          optionIds: ["mixed"],
+          questionVersion: 1,
+        },
+      ],
+    },
+  ])
+    assert.throws(() => notebookSnapshot({ ...data, ...patch }));
+});

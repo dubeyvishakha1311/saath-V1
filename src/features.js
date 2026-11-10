@@ -1,3 +1,12 @@
+import { renderResearch } from "./research.js";
+import {
+  hasJournalSafetyChoice,
+  creativeOptions,
+  choiceButtons,
+  labelsFor,
+  toggleOption,
+  journalSummary,
+} from "./journal.js";
 // All reflection logic runs locally. These rules are not a clinical assessment.
 export function riskSignal(text = "") {
   return /suicid|self[ -]?harm|kill\s+(myself|me)|hurt(ing)?\s+myself|end\s+my\s+life|better\s+off\s+dead|want\s+to\s+die|don't\s+want\s+to\s+live|do not\s+want\s+to\s+live|आत्महत्या|खुदकुशी|ख़ुदकुशी|खुद\s*को\s*(मार|नुकसान)|ख़ुद\s*को\s*(मार|नुकसान)|मरना\s*चाह|जीना\s*नहीं|jaan\s*den|marna\s*chaht|khud\s*ko\s*(maar|nuksan)/iu.test(
@@ -101,6 +110,9 @@ export function scoreScreening(kind, answers) {
 }
 export const extraPages = [
   "explore",
+  "research-story",
+  "research-song",
+  "research-poem",
   "story",
   "song",
   "poem",
@@ -242,17 +254,18 @@ function warning(c) {
   return `<p class="notice">${c.t("Prototype content, not clinically reviewed. Reflections are simple local word matches, not AI, diagnosis, or an assessment. They can be wrong. You may reject them.", "प्रोटोटाइप सामग्री; क्लिनिकल समीक्षा नहीं हुई। चिंतन केवल स्थानीय शब्द-मिलान है, AI, निदान या मूल्यांकन नहीं। यह गलत हो सकता है। आप इसे अस्वीकार कर सकते हैं।")}</p>`;
 }
 function draft(c, key, placeholder = "") {
-  return `<label for="response">${c.t("Your words", "आपके शब्द")}</label><textarea id="response" maxlength="12000" data-feature-draft="${key}" placeholder="${c.escape(placeholder)}">${c.escape(c.state.featureDrafts?.[key] || "")}</textarea><p id="feature-status" class="status" role="status">${c.state.featureDrafts?.[key] ? c.t("Draft saved on this device.", "ड्राफ़्ट इस डिवाइस पर सेव है।") : c.t("Only saved on this device.", "केवल इस डिवाइस पर सेव होगा।")}</p>`;
+  return `<details class="optional-note" ${c.state.featureDrafts?.[key] ? "open" : ""}><summary>${c.t("Add a note (optional)", "एक नोट जोड़ें (वैकल्पिक)")}</summary><label for="response">${c.t("Your words (optional)", "आपके शब्द (वैकल्पिक)")}</label><textarea id="response" maxlength="12000" data-feature-draft="${key}" placeholder="${c.escape(placeholder)}">${c.escape(c.state.featureDrafts?.[key] || "")}</textarea></details><p id="feature-status" class="status" role="status">${c.state.featureDrafts?.[key] ? c.t("Draft saved on this device.", "ड्राफ़्ट इस डिवाइस पर सेव है।") : c.t("Only saved on this device.", "केवल इस डिवाइस पर सेव होगा।")}</p>`;
 }
 function safetyCard(c) {
   return `<div class="card"><h2>${c.t("Let’s put support first", "पहले सहायता पर ध्यान दें")}</h2><p>${c.t("Some words may relate to safety. This may be a mistaken match; normal reflection is paused. Saath is not monitored and cannot determine whether you are safe.", "कुछ शब्द सुरक्षा से जुड़े हो सकते हैं। मिलान गलत हो सकता है; सामान्य चिंतन रोक दिया गया है। साथ की निगरानी नहीं होती और यह आपकी सुरक्षा तय नहीं कर सकता।")}</p>${c.button(c.t("Open support now", "अभी सहायता खोलें"), "crisis", "help")}</div>`;
 }
 export function weeklyThemes(c) {
   const text = c.state.entries.map((x) => x.text).join("\n");
-  if (riskSignal(text)) return safetyCard(c);
+  if (riskSignal(text) || c.state.entries.some(hasJournalSafetyChoice))
+    return safetyCard(c);
   return (
     reflectionCard(c, text, "week") +
-    `<div class="card"><h2>${c.t("Positive moments, in your own words", "आपके अपने शब्दों में अच्छे पल")}</h2><p>${c.t("Read your entries below and choose a moment that felt comforting, if there was one. No positive moment is assumed or invented.", "नीचे अपने पन्ने पढ़ें और कोई सुकून का पल चुनें, अगर था। किसी अच्छे पल की कल्पना नहीं की जाती।")}</p>${c.state.entries.map((entry, index) => `<div class="positive-choice">${c.button(c.t("Day ", "दिन ") + (index + 1) + (c.state.positiveDays?.includes(index) ? " ✓" : ""), `positive:${index}`, c.state.positiveDays?.includes(index) ? "primary" : "quiet")}${c.state.positiveDays?.includes(index) ? `<p style="white-space:pre-wrap">${c.escape(entry.text)}</p>` : ""}</div>`).join("")}</div>`
+    `<div class="card"><h2>${c.t("Positive moments, in your own words", "आपके अपने शब्दों में अच्छे पल")}</h2><p>${c.t("Read your entries below and choose a moment that felt comforting, if there was one. No positive moment is assumed or invented.", "नीचे अपने पन्ने पढ़ें और कोई सुकून का पल चुनें, अगर था। किसी अच्छे पल की कल्पना नहीं की जाती।")}</p>${c.state.entries.map((entry, index) => `<div class="positive-choice">${c.button(c.t("Day ", "दिन ") + (index + 1) + (c.state.positiveDays?.includes(index) ? " ✓" : ""), `positive:${index}`, c.state.positiveDays?.includes(index) ? "primary" : "quiet")}${c.state.positiveDays?.includes(index) ? `<p style="white-space:pre-wrap">${c.escape(journalSummary(entry, index, c.state.lang))}</p>` : ""}</div>`).join("")}</div>`
   );
 }
 function reflectionCard(c, text, key) {
@@ -264,8 +277,10 @@ function reflectionCard(c, text, key) {
 }
 export function renderExtra(page, c) {
   const { state: s, t, escape: e, button: b } = c;
+  if (["research-story", "research-song", "research-poem"].includes(page))
+    return renderResearch(page.slice(9), c);
   if (page === "professional")
-    return `<h1>${t("Support beyond this app", "इस ऐप से आगे की सहायता")}</h1><p>${t("If feelings persist, affect daily life, or feel difficult to manage, consider a qualified clinical psychologist, psychiatrist, or other appropriate professional. Saath does not provide diagnosis, treatment, or medication advice.", "अगर भावनाएँ बनी रहें, रोज़मर्रा पर असर डालें या संभालना मुश्किल हो, योग्य क्लिनिकल मनोवैज्ञानिक, मनोचिकित्सक या उपयुक्त पेशेवर से बात करें। साथ निदान, उपचार या दवा की सलाह नहीं देता।")}</p><div class="card"><h2>${t("Your choice, no referral fee", "आपकी पसंद, कोई रेफ़रल शुल्क नहीं")}</h2><p>${t("This prototype has no therapist booking service or verified provider directory. Ask about credentials, confidentiality, fees and emergency arrangements before choosing care. No journal entries or screening answers are shared by this app.", "इस प्रोटोटाइप में थेरेपिस्ट बुकिंग या सत्यापित पेशेवर सूची नहीं है। सहायता चुनने से पहले योग्यता, गोपनीयता, शुल्क और आपात व्यवस्था पूछें। यह ऐप डायरी या स्क्रीनिंग उत्तर साझा नहीं करता।")}</p><a class="primary call-button" href="tel:14416">${t("India · Tele-MANAS · 14416", "भारत · टेली-मानस · 14416")}</a><small>${t("Government mental-health support contact. Official listing checked 7 Nov 2026; not call-tested.", "सरकारी मानसिक स्वास्थ्य सहायता संपर्क। आधिकारिक सूची 7 नवम्बर 2026 को जाँची; कॉल-परीक्षण नहीं।")}</small></div>${b(t("Urgent help", "तुरंत सहायता"), "crisis", "help")}`;
+    return `<h1>${t("Support beyond this app", "इस ऐप से आगे की सहायता")}</h1><p>${t("If feelings persist, affect daily life, or feel difficult to manage, consider a qualified clinical psychologist, psychiatrist, or other appropriate professional. Saath does not provide diagnosis, treatment, or medication advice.", "अगर भावनाएँ बनी रहें, रोज़मर्रा पर असर डालें या संभालना मुश्किल हो, योग्य क्लिनिकल मनोवैज्ञानिक, मनोचिकित्सक या उपयुक्त पेशेवर से बात करें। साथ निदान, उपचार या दवा की सलाह नहीं देता।")}</p><div class="card"><h2>${t("Your choice, no referral fee", "आपकी पसंद, कोई रेफ़रल शुल्क नहीं")}</h2><p>${t("This prototype has no therapist booking service or verified provider directory. Ask about credentials, confidentiality, fees and emergency arrangements before choosing care. No journal entries or screening answers are sent to a clinician by this app.", "इस प्रोटोटाइप में थेरेपिस्ट बुकिंग या सत्यापित पेशेवर सूची नहीं है। सहायता चुनने से पहले योग्यता, गोपनीयता, शुल्क और आपात व्यवस्था पूछें। यह ऐप किसी चिकित्सक को डायरी या स्क्रीनिंग उत्तर नहीं भेजता।")}</p><a class="primary call-button" href="tel:14416">${t("India · Tele-MANAS · 14416", "भारत · टेली-मानस · 14416")}</a><small>${t("Government mental-health support contact. Official listing checked 7 Nov 2026; not call-tested.", "सरकारी मानसिक स्वास्थ्य सहायता संपर्क। आधिकारिक सूची 7 नवम्बर 2026 को जाँची; कॉल-परीक्षण नहीं।")}</small></div>${b(t("Urgent help", "तुरंत सहायता"), "crisis", "help")}`;
   if (page === "explore")
     return `<h1>${t("Find a starting point.", "शुरू करने का तरीका चुनें।")}</h1><p class="muted">${t("You don’t have to start by talking about yourself.", "शुरुआत अपने बारे में बताने से करना ज़रूरी नहीं।")}</p><div class="feature-grid">${[
       [
@@ -313,7 +328,7 @@ export function renderExtra(page, c) {
     ]
       .map(
         ([id, en, hi, desc, dh], index) =>
-          `<button class="feature-tile" data-action="${id}"><span class="feature-icon">${c.icon(id)}</span><span class="feature-copy"><span class="feature-number">${String(index + 1).padStart(2, "0")}</span><strong>${t(en, hi)}</strong><small>${t(desc, dh)}</small></span><span class="feature-arrow">${c.icon("arrow")}</span></button>`,
+          `<button class="feature-tile" data-action="${["story", "song", "poem"].includes(id) ? "research-" + id : id}"><span class="feature-icon">${c.icon(id)}</span><span class="feature-copy"><span class="feature-number">${String(index + 1).padStart(2, "0")}</span><strong>${t(en, hi)}</strong><small>${t(desc, dh)}</small></span><span class="feature-arrow">${c.icon("arrow")}</span></button>`,
       )
       .join(
         "",
@@ -321,13 +336,20 @@ export function renderExtra(page, c) {
   if (["story", "song", "poem"].includes(page)) {
     let intro = "";
     if (page === "story")
-      intro = `<h1>${t("The evening bench", "शाम की बेंच")}</h1><div class="card story-copy"><p>${t("On the way home, Asha paused at a park bench. Ravi was sketching the trees; Meera was watching people pass. Asha wanted to sit, but wasn’t sure whether to speak. Meera moved her bag to make room. For a while, the three shared the quiet.", "घर जाते हुए आशा पार्क की बेंच पर रुकी। रवि पेड़ों की तस्वीर बना रहा था; मीरा आते-जाते लोगों को देख रही थी। आशा बैठना चाहती थी, पर बोलने को लेकर अनिश्चित थी। मीरा ने जगह बनाने के लिए अपना बैग हटा लिया। कुछ देर तीनों ने चुप्पी साझा की।")}</p><small>${t("Original Saath story · fictional, no hidden meaning", "साथ की मौलिक कहानी · काल्पनिक, कोई छिपा अर्थ नहीं")}</small></div><p>${t("Which character felt closest to you, and why? What might they have needed? You may answer either question.", "कौन सा पात्र आपको करीब लगा और क्यों? उसे क्या चाहिए होगा? किसी भी प्रश्न का उत्तर दे सकते हैं।")}</p>`;
+      intro = `<h1>${t("The evening bench", "शाम की बेंच")}</h1><div class="card story-copy"><p>${t("On the way home, Asha paused at a park bench. Ravi was sketching the trees; Meera was watching people pass. Asha wanted to sit, but wasn’t sure whether to speak. Meera moved her bag to make room. For a while, the three shared the quiet.", "घर जाते हुए आशा पार्क की बेंच पर रुकी। रवि पेड़ों की तस्वीर बना रहा था; मीरा आते-जाते लोगों को देख रही थी। आशा बैठना चाहती थी, पर बोलने को लेकर अनिश्चित थी। मीरा ने जगह बनाने के लिए अपना बैग हटा लिया। कुछ देर तीनों ने चुप्पी साझा की।")}</p><small>${t("Original Saath story · fictional, no hidden meaning", "साथ की मौलिक कहानी · काल्पनिक, कोई छिपा अर्थ नहीं")}</small></div><p>${t("Which characters feel closest to you? Pick below; you can add why if you want.", "कौन से पात्र आपको करीब लगे? नीचे चुनें; चाहें तो वजह भी जोड़ें।")}</p>`;
     if (page === "song")
-      intro = `<h1>${t("A song that stays with you", "एक गीत जो साथ रहता है")}</h1><p>${t("Add a song title, artist, or link. No playback or lyrics are fetched. Reflection uses only your explanation—not the song, its lyrics, title, or artist.", "गीत का नाम, कलाकार या लिंक जोड़ें। गीत बजाया या बोल डाउनलोड नहीं किए जाते। चिंतन केवल आपकी व्याख्या पर है—गीत, बोल, नाम या कलाकार पर नहीं।")}</p><label for="song-title">${t("Song title or artist (optional)", "गीत या कलाकार (वैकल्पिक)")}</label><input id="song-title" maxlength="200" data-feature-meta="songTitle" value="${e(s.featureMeta?.songTitle || "")}"><label for="song-link">${t("Song link (optional, not opened automatically)", "गीत लिंक (वैकल्पिक; अपने आप नहीं खुलेगा)")}</label><input id="song-link" type="url" maxlength="1000" data-feature-meta="songLink" value="${e(s.featureMeta?.songLink || "")}"><p>${t("Why do you listen to it? What do you relate to in your own life? Please use your own words, not copied lyrics.", "आप इसे क्यों सुनते हैं? अपने जीवन की किस बात से जुड़ते हैं? गीत के बोल की जगह अपने शब्द लिखें।")}</p>`;
+      intro = `<h1>${t("A song that stays with you", "एक गीत जो साथ रहता है")}</h1><p>${t("Add a song title, artist, or link. No playback or lyrics are fetched. Reflection uses only your explanation—not the song, its lyrics, title, or artist.", "गीत का नाम, कलाकार या लिंक जोड़ें। गीत बजाया या बोल डाउनलोड नहीं किए जाते। चिंतन केवल आपकी व्याख्या पर है—गीत, बोल, नाम या कलाकार पर नहीं।")}</p><label for="song-title">${t("Song title or artist (optional)", "गीत या कलाकार (वैकल्पिक)")}</label><input id="song-title" maxlength="200" data-feature-meta="songTitle" value="${e(s.featureMeta?.songTitle || "")}"><label for="song-link">${t("Song link (optional, not opened automatically)", "गीत लिंक (वैकल्पिक; अपने आप नहीं खुलेगा)")}</label><input id="song-link" type="url" maxlength="1000" data-feature-meta="songLink" value="${e(s.featureMeta?.songLink || "")}"><p>${t("Choose what fits about a song you have in mind. Adding a title or a note is optional. Please do not copy lyrics.", "मन में किसी गीत के बारे में जो सही लगे चुनें। नाम या नोट जोड़ना वैकल्पिक है। कृपया गीत के बोल कॉपी न करें।")}</p>`;
     if (page === "poem")
-      intro = `<h1>${t("Leave room for a line", "एक पंक्ति के लिए जगह")}</h1><div class="card story-copy"><p>${t("The window holds a little light.<br>The evening takes its time.<br>I leave a space upon this page,<br>and fill it with ________.", "खिड़की में थोड़ी रोशनी है।<br>शाम अपनी गति से चलती है।<br>इस पन्ने पर थोड़ी जगह छोड़ता हूँ,<br>और उसमें भरता हूँ ________।")}</p><small>${t("Original Saath poem", "साथ की मौलिक कविता")}</small></div><p>${t("Complete the last line, or write what the poem brings up for you. What made you choose those words?", "आखिरी पंक्ति पूरी करें या कविता से जो मन में आए, लिखें। आपने ये शब्द क्यों चुने?")}</p>`;
+      intro = `<h1>${t("Leave room for a line", "एक पंक्ति के लिए जगह")}</h1><div class="card story-copy"><p>${t("The window holds a little light.<br>The evening takes its time.<br>I leave a space upon this page,<br>and fill it with ________.", "खिड़की में थोड़ी रोशनी है।<br>शाम अपनी गति से चलती है।<br>इस पन्ने पर थोड़ी जगह छोड़ता हूँ,<br>और उसमें भरता हूँ ________।")}</p><small>${t("Original Saath poem", "साथ की मौलिक कविता")}</small></div><p>${t("Which word could fill the space? Choose below, or add your own line if you want.", "खाली जगह कौन सा शब्द भर सकता है? नीचे चुनें, या चाहें तो अपनी पंक्ति जोड़ें।")}</p>`;
     return (
       intro +
+      `<p class="muted">${t("Pick all that fit. Writing is optional; these choices are not a clinical assessment.", "जो लागू हों, सब चुनें। लिखना वैकल्पिक है; ये चुनाव क्लिनिकल मूल्यांकन नहीं हैं।")}</p>` +
+      choiceButtons(
+        s.featureChoices?.[page] || [],
+        creativeOptions[page],
+        c,
+        `creative-choice:${page}`,
+      ) +
       draft(
         c,
         page,
@@ -345,17 +367,17 @@ export function renderExtra(page, c) {
     if (!x)
       return `<h1>${t("Choose a saved reflection", "सेव किया चिंतन चुनें")}</h1>${b(t("View saved reflections", "सेव किए चिंतन देखें"), "history", "primary")}`;
     if (riskSignal(x.text)) return safetyCard(c);
-    return `<h1>${t("Your words, reflected gently", "आपके शब्दों पर हल्का चिंतन")}</h1><small>${e(x.type)} · ${e(x.date)}</small>${x.type === "song" ? `<p>${e(x.songTitle || "")}</p>` : ""}<div class="card"><p style="white-space:pre-wrap">${e(x.text)}</p></div>${reflectionCard(c, x.text, x.id)}${b(t("Explore something else", "कुछ और आज़माएँ"), "explore", "quiet")}`;
+    return `<h1>${x.text ? t("Your words, reflected gently", "आपके शब्दों पर हल्का चिंतन") : t("Your choices, kept together.", "आपके चुनाव, एक जगह।")}</h1><small>${e(x.type)} · ${e(x.date)}</small>${x.type === "song" ? `<p>${e(x.songTitle || "")}</p>` : ""}<div class="card"><p style="white-space:pre-wrap">${e(x.text)}</p>${x.optionIds?.length ? `<p>${e(labelsFor(x.optionIds, creativeOptions[x.type] || [], s.lang).join(" · "))}</p>` : ""}</div>${x.text ? reflectionCard(c, x.text, x.id) : `<p class="notice">${t("Your choices are saved as chosen, without interpreting your mental health. No written note was added.", "आपके चुनाव वैसे ही सेव हैं; उनसे मानसिक स्वास्थ्य का अनुमान नहीं लगाया गया। कोई लिखित नोट नहीं जोड़ा गया।")}</p>`}${b(t("Explore something else", "कुछ और आज़माएँ"), "explore", "quiet")}`;
   }
   if (page === "history")
-    return `<h1>${t("Your reflection shelf", "आपके चिंतन")}</h1><p>${t("Saved on this device only.", "केवल इस डिवाइस पर सेव है।")}</p>${
+    return `<h1>${t("Your reflection shelf", "आपके चिंतन")}</h1><p>${t("Saved on this device. Cloud copies update only when you explicitly back up.", "इस डिवाइस पर सेव है। क्लाउड कॉपी केवल आपके बैकअप बनाने पर बदलती है।")}</p>${
       (s.experiences || []).length
         ? (s.experiences || [])
             .slice()
             .reverse()
             .map(
               (x) =>
-                `<button class="history-item" data-action="open:${e(x.id)}"><strong>${e(x.type === "exercise" ? t("Exercise", "अभ्यास") : x.type)}</strong><span>${e(x.date)}</span><small>${e(x.text.slice(0, 90))}</small></button>`,
+                `<button class="history-item" data-action="open:${e(x.id)}"><strong>${e(x.type === "exercise" ? t("Exercise", "अभ्यास") : x.type)}</strong><span>${e(x.date)}</span><small>${e((x.text || labelsFor(x.optionIds, creativeOptions[x.type] || [], s.lang).join(" · ")).slice(0, 90))}</small></button>`,
             )
             .join("")
         : `<div class="card">${t("Nothing saved yet. Begin wherever feels easiest.", "अभी कुछ सेव नहीं है। जहाँ आसान लगे, शुरू करें।")}</div>`
@@ -451,6 +473,24 @@ export function handleExtra(action, c) {
     c.render();
     return true;
   }
+  if (action.startsWith("creative-choice:")) {
+    const [, type, id] = action.split(":");
+    if (!creativeOptions[type]?.some((o) => o.id === id)) return true;
+    const previous = JSON.stringify(s);
+    s.featureChoices ||= {};
+    s.featureChoices[type] = toggleOption(
+      s.featureChoices[type] || [],
+      id,
+      creativeOptions[type],
+    );
+    if (!c.persist()) {
+      Object.keys(s).forEach((k) => delete s[k]);
+      Object.assign(s, JSON.parse(previous));
+      c.alert(t("Could not save your choice.", "चुनाव सेव नहीं हुआ।"));
+    }
+    c.render();
+    return true;
+  }
   if (extraPages.includes(action)) {
     c.go(action);
     return true;
@@ -459,9 +499,14 @@ export function handleExtra(action, c) {
     const type = action.split(":")[1],
       key = type === "exercise" ? "exercise:" + s.selectedExercise : type;
     const text = c.root.querySelector("#response")?.value.trim() || "";
-    if (!text) {
+    const optionIds = creativeOptions[type]
+      ? s.featureChoices?.[type] || []
+      : [];
+    if (!text && !optionIds.length) {
       c.root.querySelector("#feature-status").textContent = t(
-        "Write a few words first, or skip this.",
+        creativeOptions[type]
+          ? "Pick an option or write a few words first, or skip this."
+          : "Add a note to save this reflection, or skip the exercise.",
         "पहले कुछ शब्द लिखें, या छोड़ें।",
       );
       return true;
@@ -476,6 +521,8 @@ export function handleExtra(action, c) {
       date: new Date().toLocaleDateString("en-CA"),
       text,
     };
+    if (creativeOptions[type])
+      Object.assign(entry, { optionIds: [...optionIds], questionVersion: 1 });
     if (type === "song")
       Object.assign(entry, {
         songTitle: s.featureMeta?.songTitle || "",
@@ -486,6 +533,7 @@ export function handleExtra(action, c) {
     s.experiences.push(entry);
     s.selectedExperience = id;
     if (s.featureDrafts) delete s.featureDrafts[key];
+    if (s.featureChoices) delete s.featureChoices[type];
     if (type === "song") delete s.featureMeta;
     s.selectedExperience = id;
     if (!c.persist()) {

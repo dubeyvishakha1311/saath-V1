@@ -1,9 +1,12 @@
+import { dailyQuestions, creativeOptions, validOptionIds } from "./journal.js";
 export const KDF_ITERATIONS = 600000;
 export const CLOUD_CONSENT = "cloud-backup-v1";
 const MAX_BYTES = 2 * 1024 * 1024;
 const fields = [
   "entries",
   "draft",
+  "journalChoices",
+  "featureChoices",
   "lang",
   "phone",
   "mood",
@@ -44,6 +47,47 @@ export function notebookSnapshot(value) {
   if (data.entries.some((x) => !x || !text(x.text) || !text(x.date, 50)))
     fail();
   if (data.draft !== undefined && !text(data.draft)) fail();
+  const validJournal = (x) =>
+    !!x &&
+    Number.isInteger(x.day) &&
+    x.day >= 1 &&
+    x.day <= 7 &&
+    validOptionIds(
+      x.optionIds,
+      dailyQuestions[x.day - 1].options,
+      !!dailyQuestions[x.day - 1].single,
+    );
+  for (const entry of data.entries)
+    if (
+      entry.optionIds !== undefined &&
+      (!validJournal(entry) || entry.questionVersion !== 1)
+    )
+      fail();
+  if (data.journalChoices !== undefined && !validJournal(data.journalChoices))
+    fail();
+  if (data.featureChoices !== undefined) {
+    if (
+      !data.featureChoices ||
+      typeof data.featureChoices !== "object" ||
+      Array.isArray(data.featureChoices)
+    )
+      fail();
+    for (const [kind, ids] of Object.entries(data.featureChoices))
+      if (!creativeOptions[kind] || !validOptionIds(ids, creativeOptions[kind]))
+        fail();
+  }
+  if (data.experiences !== undefined && !Array.isArray(data.experiences))
+    fail();
+  for (const x of data.experiences || [])
+    if (
+      !x ||
+      (x.optionIds !== undefined &&
+        (!creativeOptions[x.type] ||
+          !validOptionIds(x.optionIds, creativeOptions[x.type]) ||
+          x.questionVersion !== 1))
+    )
+      fail();
+
   if (data.consent !== undefined && typeof data.consent !== "boolean") fail();
   if (data.phone !== undefined && !text(data.phone, 50)) fail();
   if (

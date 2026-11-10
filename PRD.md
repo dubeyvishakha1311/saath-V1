@@ -369,3 +369,7 @@ An eligible adult can understand Saath's limits, choose English or Hindi, journa
 ---
 
 **Source note:** This PRD translates the attached idea summary into proposed delivery requirements. The summary's market research, competitor descriptions, prototype availability, and contact numbers were not independently verified. Added defaults, metrics, technical requirements, and release gates are proposals for review, not claims that these capabilities already exist.
+
+## Implementation amendment · 7 November 2026 · v0.6.0
+
+The journal is tap-first: Day 1 single choice; Days 2–7 multiple choices; optional notes. Story/Song/Poem cards open sourced participation research before tap-first activities. Statistics must retain their source population, year and measure, must not be ranked as comparable preferences, and must never imply anxiety/depression treatment. Day 5 “I wish I could disappear” selection immediately opens crisis guidance even if storage fails. This rule and all option wording require psychologist/native-speaker review before a pilot; no review is claimed. Structured answers and drafts are covered by the existing explicit, separately encrypted Supabase backup, not silent plaintext collection. See [review and data map](docs/RESEARCH_AND_CHOICES.md).

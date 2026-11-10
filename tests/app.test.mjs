@@ -533,7 +533,7 @@ test("selection updates keep keyboard focus; navigation focuses the new screen h
   assert.equal(a.doc.activeElement, a.doc.querySelector("main h1"));
   assert.match(
     a.doc.querySelector("#status").textContent,
-    /Only stored on this device/,
+    /Local notebook. Cloud backup is a separate action/,
   );
   a.close();
 });

@@ -1,11 +1,16 @@
 import { createAccountController, accountPages } from "../src/account.js";
 import * as features from "../src/features.js";
 import * as journal from "../src/journal.js";
+import { createUpdateController } from "../src/updates.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { JSDOM } from "jsdom";
 const source = readFileSync(new URL("../src/main.js", import.meta.url), "utf8")
+  .replace(
+    /import\s*\{[^}]*\}\s*from\s*['"]\.\/native-updates\.js['"];?/,
+    'const createNativeUpdater=(ui)=>window.__createUpdateController({...ui,config:{},webVersion:"0.7.0",native:false});',
+  )
   .replace(
     /^import\s+['"]\.\/(?:style\.css|native-navigation\.js)['"];?\s*$/gm,
     "",
@@ -35,6 +40,7 @@ function app(saved, client = null) {
   const w = dom.window;
   w.__features = features;
   w.__journal = journal;
+  w.__createUpdateController = createUpdateController;
   w.__account = { createAccountController, accountPages };
   w.__supabase = client;
   w.scrollTo = () => {};
@@ -1053,15 +1059,13 @@ test("account backup/restore keeps all structured answers and drafts together as
   async function transfer(kind) {
     a.doc.querySelector("#vault-password").value = "separate backup passphrase";
     a.doc.querySelector("#cloud-consent").checked = true;
-    a.doc
-      .querySelector("#account-form")
-      .dispatchEvent(
-        new a.w.SubmitEvent("submit", {
-          bubbles: true,
-          cancelable: true,
-          submitter: a.doc.querySelector(`button[value=${kind}]`),
-        }),
-      );
+    a.doc.querySelector("#account-form").dispatchEvent(
+      new a.w.SubmitEvent("submit", {
+        bubbles: true,
+        cancelable: true,
+        submitter: a.doc.querySelector(`button[value=${kind}]`),
+      }),
+    );
     await settle(a);
   }
   await transfer("upload");
@@ -1077,5 +1081,21 @@ test("account backup/restore keeps all structured answers and drafts together as
     /Backup restored/,
   );
   assert.equal(a.doc.querySelector("[data-action=back]").disabled, false);
+  a.close();
+});
+
+test("My space exposes update status in the preview without offering an unsupported native installation", () => {
+  const a = app({ consent: true, lang: "en", entries: [] });
+  a.click("settings");
+  assert.match(a.doc.querySelector("#app-updates").textContent, /App updates/);
+  assert.match(
+    a.doc.querySelector("#app-updates").textContent,
+    /Browser preview/,
+  );
+  assert.equal(a.doc.querySelector('[data-action="update-install"]'), null);
+  a.click("language");
+  assert.match(a.doc.querySelector("#app-updates").textContent, /ऐप अपडेट/);
+  a.click("panic");
+  assert.ok(a.doc.querySelector('[data-action="ground"]'));
   a.close();
 });

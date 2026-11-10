@@ -1,3 +1,4 @@
+import { createNativeUpdater } from "./native-updates.js";
 import "./style.css";
 import "./native-navigation.js";
 import {
@@ -63,6 +64,7 @@ const prompts = dailyQuestions.map((q) => [q.en, q.hi]);
 const today = () => state.entries.find((e) => e.date === date());
 const navigationStack = [];
 let contactDraft;
+let updates;
 function navigate(p, nextTool = "", { replace = false } = {}) {
   if (
     !state.consent &&
@@ -285,7 +287,7 @@ function content() {
     case "crisis":
       return `<div class="eyebrow">${t("Support right now", "अभी सहायता")}</div><h1>${t("Your safety matters.", "आपकी सुरक्षा ज़रूरी है।")}</h1><p>${t("If you may hurt yourself, someone else, or cannot stay safe, contact local emergency services or go to the nearest emergency department. If possible, move near someone you trust and away from things you could use to harm yourself.", "अगर आप खुद को या किसी और को नुकसान पहुँचा सकते हैं, या सुरक्षित नहीं रह सकते, स्थानीय आपात सेवा से संपर्क करें या नज़दीकी आपात विभाग जाएँ। संभव हो तो किसी भरोसेमंद व्यक्ति के पास जाएँ और नुकसान पहुँचाने वाली चीज़ों से दूर रहें।")}</p><div class="card"><h2>${t("Ask someone to stay with you", "किसी को अपने साथ रहने को कहें")}</h2>${contactLink()}<p>${t("In India: 112 for emergency assistance; Tele-MANAS 14416 for mental-health support. Outside India, use your local emergency service. Calls require phone service and are never placed automatically.", "भारत में: आपात सहायता के लिए 112; मानसिक स्वास्थ्य सहायता के लिए टेली-मानस 14416। भारत के बाहर स्थानीय आपात सेवा का उपयोग करें। कॉल के लिए फ़ोन सेवा चाहिए; कॉल अपने आप नहीं लगती।")}</p><div class="resource-links"><a class="danger call-button" href="tel:112">${t("Call emergency · 112", "आपात कॉल · 112")}</a><a class="primary call-button" href="tel:14416">${t("Call Tele-MANAS · 14416", "टेली-मानस · 14416")}</a></div><small>${t("India · official web listings checked 7 Nov 2026, not call-tested. Availability may vary.", "भारत · आधिकारिक वेब सूची 7 नवम्बर 2026 को जाँची; कॉल-परीक्षण नहीं। उपलब्धता बदल सकती है।")}</small><p><a href="https://112.gov.in/about" target="_blank" rel="noopener noreferrer">112 · official source</a> · <a href="https://dghs.mohfw.gov.in/national-mental-health-programme.php" target="_blank" rel="noopener noreferrer">Tele-MANAS · official source</a></p></div><p class="notice">${t("Saath is not monitored, cannot contact responders, and cannot reliably detect crises. Local word matching can miss signals or get them wrong. Nobody has been notified. Do not wait for a reply from this app.", "साथ की निगरानी नहीं होती, यह सहायता सेवाओं से संपर्क या भरोसेमंद संकट पहचान नहीं कर सकता। स्थानीय शब्द-मिलान संकेत चूक या गलत समझ सकता है। किसी को सूचित नहीं किया गया है। इस ऐप के जवाब का इंतज़ार न करें।")}</p>${button(t("Back to calming tools", "शांत होने के अभ्यास"), "panic", "quiet")}`;
     case "settings":
-      return `<h1>${t("Make yourself<br>at home.", "अपनी जगह,<br>अपने तरीके से।")}</h1>${account.settingsCard()}<div class="card"><h2>${t("Trusted person", "भरोसेमंद व्यक्ति")}</h2><p>${t("Optional. Add a number without sharing your contacts. Tapping Call opens your dialler; you decide whether to call.", "वैकल्पिक। कॉन्टैक्ट साझा किए बिना नंबर जोड़ें। कॉल दबाने से डायलर खुलता है; कॉल करना आप तय करते हैं।")}</p><label for="phone">${t("Phone number", "फ़ोन नंबर")}</label><input id="phone" type="tel" maxlength="20" value="${escape(contactDraft ?? state.phone ?? "")}" autocomplete="off">${button(t("Save contact", "नंबर सेव करें"), "contact", "primary")} ${button(t("Cancel changes", "बदलाव रद्द करें"), "cancel-contact", "quiet")}<p id="status" role="status"></p></div><div class="card"><h2>${t("Privacy & prototype limits", "गोपनीयता और सीमाएँ")}</h2><p>${t("Writing is stored locally without app-level encryption. Accounts use Supabase Auth and this device stores a sign-in session. Optional cloud backups are encrypted with your separate passphrase before upload. No ads, analytics or remote AI. Android app backup is disabled.", "लिखावट स्थानीय है, ऐप-स्तर एन्क्रिप्शन के बिना। खाते Supabase Auth उपयोग करते हैं और डिवाइस साइन-इन सत्र रखता है। वैकल्पिक क्लाउड बैकअप अपलोड से पहले आपकी अलग पासफ़्रेज़ से एन्क्रिप्ट होते हैं। विज्ञापन, एनालिटिक्स या रिमोट AI नहीं। Android ऐप बैकअप बंद है।")}</p><p>${t("Not clinically reviewed. Local safety word matching is incomplete, and optional English screening is not a diagnosis. No automatic cloud sync, remote AI, or new journal cycles. Do not rely on this prototype for urgent support.", "क्लिनिकल समीक्षा नहीं हुई है। स्थानीय सुरक्षा शब्द-मिलान अधूरा है; वैकल्पिक अंग्रेज़ी स्क्रीनिंग निदान नहीं है। अपने आप क्लाउड सिंक, रिमोट AI या नए डायरी चक्र नहीं हैं। तुरंत सहायता के लिए इस प्रोटोटाइप पर निर्भर न रहें।")}</p>${button(account.getUser() ? t("Delete notebook & cloud backup", "डायरी और क्लाउड बैकअप मिटाएँ") : t("Delete all my data", "मेरा सारा डेटा मिटाएँ"), "delete", "danger")}</div><small>Saath 0.6.0 · ${t("Internal testing prototype · 18+", "आंतरिक परीक्षण प्रोटोटाइप · 18+")}</small>`;
+      return `<h1>${t("Make yourself<br>at home.", "अपनी जगह,<br>अपने तरीके से।")}</h1>${account.settingsCard()}${updates?.renderCard() || ""}<div class="card"><h2>${t("Trusted person", "भरोसेमंद व्यक्ति")}</h2><p>${t("Optional. Add a number without sharing your contacts. Tapping Call opens your dialler; you decide whether to call.", "वैकल्पिक। कॉन्टैक्ट साझा किए बिना नंबर जोड़ें। कॉल दबाने से डायलर खुलता है; कॉल करना आप तय करते हैं।")}</p><label for="phone">${t("Phone number", "फ़ोन नंबर")}</label><input id="phone" type="tel" maxlength="20" value="${escape(contactDraft ?? state.phone ?? "")}" autocomplete="off">${button(t("Save contact", "नंबर सेव करें"), "contact", "primary")} ${button(t("Cancel changes", "बदलाव रद्द करें"), "cancel-contact", "quiet")}<p id="status" role="status"></p></div><div class="card"><h2>${t("Privacy & prototype limits", "गोपनीयता और सीमाएँ")}</h2><p>${t("Writing is stored locally without app-level encryption. Accounts use Supabase Auth and this device stores a sign-in session. Optional cloud backups are encrypted with your separate passphrase before upload. No ads, analytics or remote AI. Android app backup is disabled.", "लिखावट स्थानीय है, ऐप-स्तर एन्क्रिप्शन के बिना। खाते Supabase Auth उपयोग करते हैं और डिवाइस साइन-इन सत्र रखता है। वैकल्पिक क्लाउड बैकअप अपलोड से पहले आपकी अलग पासफ़्रेज़ से एन्क्रिप्ट होते हैं। विज्ञापन, एनालिटिक्स या रिमोट AI नहीं। Android ऐप बैकअप बंद है।")}</p><p>${t("Not clinically reviewed. Local safety word matching is incomplete, and optional English screening is not a diagnosis. No automatic cloud sync, remote AI, or new journal cycles. Do not rely on this prototype for urgent support.", "क्लिनिकल समीक्षा नहीं हुई है। स्थानीय सुरक्षा शब्द-मिलान अधूरा है; वैकल्पिक अंग्रेज़ी स्क्रीनिंग निदान नहीं है। अपने आप क्लाउड सिंक, रिमोट AI या नए डायरी चक्र नहीं हैं। तुरंत सहायता के लिए इस प्रोटोटाइप पर निर्भर न रहें।")}</p>${button(account.getUser() ? t("Delete notebook & cloud backup", "डायरी और क्लाउड बैकअप मिटाएँ") : t("Delete all my data", "मेरा सारा डेटा मिटाएँ"), "delete", "danger")}</div><small>Saath ${escape(updates?.versionLabel() || "0.7.0")} · ${t("Internal testing prototype · 18+", "आंतरिक परीक्षण प्रोटोटाइप · 18+")}</small>`;
   }
 }
 function contactLink() {
@@ -297,6 +299,7 @@ function exercise() {
   return `<div class="card">${tool === "breath" ? `<div class="circle breathe"><span id="phase">${t("Breathe gently", "धीरे साँस लें")}</span></div><p>${t("Let your breath stay comfortable. No need to hold it or breathe deeply. If focusing on breathing feels worse, stop and try grounding.", "आराम से साँस लें। साँस रोकने या गहरी साँस की ज़रूरत नहीं। असहज लगे तो रोकें और ग्राउंडिंग चुनें।")}</p>` : tool === "ground" ? `<h2>${t("Notice your surroundings", "अपने आसपास ध्यान दें")}</h2><ul>${[t("5 things you can see", "5 चीज़ें जो दिखती हैं"), t("4 things you can feel", "4 चीज़ें जिन्हें महसूस कर सकते हैं"), t("3 things you can hear", "3 आवाज़ें जो सुनाई देती हैं"), t("2 things you can smell", "2 चीज़ें जिनकी खुशबू महसूस हो"), t("1 thing you can taste, or one neutral detail nearby", "1 स्वाद, या आसपास की कोई सामान्य चीज़")].map((x) => `<li>${x}</li>`).join("")}</ul>` : `<h2>${t("Count slowly, at your pace", "अपनी गति से धीरे गिनें")}</h2><div class="circle" id="number">20</div>${button(t("Next number", "अगली संख्या"), "next")}<p>${t("Start at 20 and count down. There is no right speed. Stop or restart whenever you want.", "20 से उलटी गिनती करें। कोई सही गति नहीं है। जब चाहें रुकें या फिर शुरू करें।")}</p>`}${button(t("Stop / choose another tool", "रोकें / दूसरा अभ्यास चुनें"), "stop", "quiet")}</div>`;
 }
 function act(a) {
+  if (updates?.handle(a)) return;
   if (account.handle(a)) return;
   if (handleExtra(a, featureContext())) return;
   if (a === "back") return goBack();
@@ -548,7 +551,16 @@ const account = createAccountController({
   },
   clearNotebook,
 });
+updates = createNativeUpdater({
+  t,
+  escape,
+  getPage: () => page,
+  render,
+  confirm: (message) => window.confirm(message),
+  accountBusy: () => account.isBusy(),
+});
 render();
+updates.boot().catch(() => {});
 if (authCallbackFailed()) {
   account.handle("login");
   account.notify(

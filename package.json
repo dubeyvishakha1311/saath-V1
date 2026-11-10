@@ -1,19 +1,22 @@
 {
   "name": "saath",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "android:sync": "npm run build && cap sync android",
     "test": "node --test tests/*.test.mjs",
-    "check:supabase": "node scripts/check-supabase.mjs"
+    "check:supabase": "node scripts/check-supabase.mjs",
+    "ota:package": "node scripts/package-ota.mjs",
+    "ota:baseline": "node scripts/ota-fingerprint.mjs --write"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",
     "@capacitor/app": "^7.1.2",
     "@capacitor/browser": "^7.0.5",
     "@capacitor/core": "^7.4.3",
+    "@capgo/capacitor-updater": "^7.53.0",
     "@fontsource/noto-sans-devanagari": "^5.3.0",
     "@supabase/supabase-js": "^2.119.0"
   },

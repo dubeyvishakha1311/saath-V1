@@ -1,1 +1,22 @@
-{"appId":"in.saath.wellness","appName":"Saath","webDir":"dist","android":{"allowMixedContent":false}}
+{
+  "appId": "in.saath.wellness",
+  "appName": "Saath",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": false,
+      "statsUrl": "",
+      "channelUrl": "",
+      "updateUrl": "",
+      "allowModifyUrl": false,
+      "autoDeleteFailed": false,
+      "autoDeletePrevious": false,
+      "appReadyTimeout": 30000,
+      "responseTimeout": 20,
+      "publicKey": "SET_SIGNING_KEY_BEFORE_DISTRIBUTION"
+    }
+  }
+}

@@ -1,4 +1,4 @@
-# Saath · 0.6.0
+# Saath · 0.7.0
 
 An Android-first, English/Hindi **internal-testing wellness prototype** based on the attached idea summary and [PRD.md](PRD.md). Not a clinically approved product, diagnostic tool, therapy service, or monitored crisis service.
 
@@ -27,12 +27,20 @@ External resources open only on user action. Dialler links require calling servi
 
 No remote AI/provider, validated Hindi screening, therapist booking/provider directory, voice journaling, payment, subscription, institution dashboard, cloud sync, or additional journal cycles are implemented. Some of these are optional business ideas in the PDF rather than core app requirements. A production launch requires clinical, native-speaker, accessibility, device, security, privacy/legal, and operational review—not just a successful build.
 
+## In-app web updates (0.7.0 — activation pending)
+
+My space now includes **App updates**. The Android updater supports signed web-only bundles, compatible-native-runtime checks, explicit download/restart, startup-failure rollback, and returning to the installed APK. It never installs automatically during writing or crisis support. Notebook/session data is not sent to the update host. Plugin telemetry is disabled; the app uses public GitHub Releases, not a paid Capgo service.
+
+**Not live yet:** this GitHub connection returned HTTP 403 for Actions Secrets access. No release signing key was provisioned, and delivery is deliberately disabled. Follow [activation and publishing](docs/OTA_UPDATES.md) before distributing the one-time bootstrap APK. The current 0.7.0 debug build is for integration testing only, not an activated updater installer. Existing 0.6.0 APKs cannot gain a native updater through web changes alone.
+
+One native APK installation will still be required **after activation**. Future compatible HTML/CSS/JavaScript/content updates use My space without APK reinstalls; native/plugin/permission changes still need a new APK. This is not a promise that every future change can be delivered OTA.
+
 ## Tap-first check-ins and research (0.6.0)
 
 - Story/Song/Poem cards first open a research screen with independently sourced participation percentage bars, populations, dates, links and an explicit **not treatment evidence / not a preference ranking** notice. The activity follows via Continue; each supports tap-only answers and optional notes.
 - Selecting **“I wish I could disappear” on Day 5** opens crisis support immediately, before saving/submitting. Tele-MANAS 14416 and emergency 112 remain visible. This precautionary rule is **awaiting psychologist review**, not a diagnosis or validated risk assessment; nobody is alerted.
 - All journal/creative selections, notes and drafts are included in the existing single encrypted account backup in Supabase. They are saved on-device immediately; **cloud upload is manual**, with explicit consent/passphrase. No plaintext response table or activity tracking was added. Sign in, copy a guest notebook if needed, then use Account & backup → Encrypted cloud backup.
-- Checked with 52 automated tests and 84 mobile Chromium screen combinations in English/Hindi at 320/390/768px. Physical Android, clinical and real-account/provider testing remain release gates.
+- Checked with 60 automated tests and 84 mobile Chromium screen combinations in English/Hindi at 320/390/768px. Physical Android, clinical and real-account/provider testing remain release gates.
 
 See [research sources, storage map and review checklist](docs/RESEARCH_AND_CHOICES.md).
 
@@ -74,7 +82,7 @@ cd android
 
 Output: `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-The GitHub Actions **Build Android APK** workflow performs tests, web/native sync and debug compilation on pushes to `arena/55e548ad-saath-v1`, or manual dispatch. Download the latest successful run's **Saath-0.6.0-debug-apk** artifact from [Actions](https://github.com/dubeyvishakha1311/saath-V1/actions). Artifacts are retained for 14 days.
+The GitHub Actions **Build Android APK** workflow performs tests, web/native sync and debug compilation on pushes to `arena/55e548ad-saath-v1`, or manual dispatch. Download the latest successful run's **Saath-0.7.0-debug-apk** artifact from [Actions](https://github.com/dubeyvishakha1311/saath-V1/actions). Artifacts are retained for 14 days.
 
 ### Install for internal testing
 
@@ -82,7 +90,7 @@ Extract the artifact ZIP and open `app-debug.apk` on Android 6.0+. Enable permis
 
 ### Validation
 
-52 automated tests cover account isolation, explicit backup consent, authenticated deletion, session races, cryptography/tamper rejection, original features, scoring and incomplete inputs, safety overrides, draft preservation, user-theme rejection, HTML escaping, navigation, and delete-all. Mobile Chromium smoke checks exercise Explore screens at 320/390/768px, story reflection, and PHQ-9 safety routing, with no horizontal overflow or uncaught page errors. These checks do not replace clinical validation, a security audit, accessibility testing, or physical Android installation/calling/back-button tests.
+60 automated tests cover account isolation, explicit backup consent, authenticated deletion, session races, cryptography/tamper rejection, original features, scoring and incomplete inputs, safety overrides, draft preservation, user-theme rejection, HTML escaping, navigation, and delete-all. Mobile Chromium smoke checks exercise Explore screens at 320/390/768px, story reflection, and PHQ-9 safety routing, with no horizontal overflow or uncaught page errors. These checks do not replace clinical validation, a security audit, accessibility testing, or physical Android installation/calling/back-button tests.
 
 ## Navigation emphasis (0.3.1)
 

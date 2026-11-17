@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.apk
+android/.gradle/
+android/**/build/
+android/local.properties
+.env
+.env.*
+!.env.example
+ota-release/
+*.private.pem
+*.key

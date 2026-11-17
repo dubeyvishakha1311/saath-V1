@@ -1,0 +1,37 @@
+name: Build Android APK
+on:
+  push:
+    branches: [arena/55e548ad-saath-v1]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - run: npm test
+      - name: Read-only Supabase connection and anonymous-access smoke test
+        run: npm run check:supabase
+      - run: npm run android:sync
+      - name: Compile debug APK
+        working-directory: android
+        shell: bash
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon > build.log 2>&1 || { tail -70 build.log | while IFS= read -r line; do echo "::error::$line"; done; exit 1; }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Saath-0.7.0-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14

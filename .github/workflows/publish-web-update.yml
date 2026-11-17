@@ -1,0 +1,42 @@
+name: Publish signed web update
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: saath-ota-stable
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/arena/55e548ad-saath-v1'
+    environment: ota-production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run android:sync
+      - name: Verify native compatibility and sign bundle
+        env:
+          SAATH_OTA_SIGNING_KEY: ${{ secrets.SAATH_OTA_SIGNING_KEY }}
+        run: npm run ota:package
+      - name: Publish immutable version and move signed stable pointer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p 'require("./package.json").version')
+          # Never overwrite an existing version. Roll back by publishing old web
+          # content under a NEW increasing version, not by downgrading clients.
+          gh release create "saath-web-$VERSION" ota-release/saath-update.bin ota-release/saath-update.json --target "$GITHUB_SHA" --title "Saath web $VERSION" --notes "Signed web-only update; native compatibility verified." --latest=false
+          if gh release view saath-ota-stable >/dev/null 2>&1; then
+            gh release edit saath-ota-stable --notes-file ota-release/saath-update.json
+          else
+            gh release create saath-ota-stable --target "$GITHUB_SHA" --title "Saath OTA stable channel" --notes-file ota-release/saath-update.json --latest=false
+          fi

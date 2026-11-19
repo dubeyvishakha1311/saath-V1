@@ -3,10 +3,16 @@ on:
   push:
     branches: [arena/55e548ad-saath-v1]
   workflow_dispatch:
+    inputs:
+      publish_existing_apk:
+        description: Publish the tested v0.7.0 APK as a direct release download
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
   build:
+    if: ${{ !inputs.publish_existing_apk }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -35,3 +41,25 @@ jobs:
           name: Saath-0.7.0-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
+
+  publish-tested-apk:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_existing_apk }}
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Publish existing tested binary without rebuilding or changing its signature
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh run view 42841924270 --json conclusion --jq .conclusion)" = success
+          test "$(gh run view 42841924270 --json headSha --jq .headSha)" = 7cb0541daf443b6a119a8a3ee7746f2c5d7ee1a5
+          gh run download 42841924270 --name Saath-0.7.0-debug-apk --dir apk
+          test -s apk/app-debug.apk
+          mv apk/app-debug.apk apk/Saath-0.7.0-debug.apk
+          sha256sum apk/Saath-0.7.0-debug.apk
+          gh release create saath-v0.7.0-debug apk/Saath-0.7.0-debug.apk --target 7cb0541daf443b6a119a8a3ee7746f2c5d7ee1a5 --title "Saath v0.7.0 — Android debug build" --prerelease --notes "Standalone APK from successful Android build 42841924270, unchanged and not rebuilt. Debug/testing build, not production approved. Back up notebooks before installing; do not uninstall an existing app to resolve a signing conflict without a verified backup. OTA delivery remains disabled pending signing-key activation."

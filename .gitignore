@@ -10,3 +10,6 @@ android/local.properties
 ota-release/
 *.private.pem
 *.key
+
+.venv/
+__pycache__/

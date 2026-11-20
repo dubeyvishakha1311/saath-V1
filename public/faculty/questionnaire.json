@@ -1,0 +1,321 @@
+[
+  {
+    "en": "How was your day?",
+    "hi": "आज आपका दिन कैसा रहा?",
+    "single": true,
+    "options": [
+      {
+        "id": "good",
+        "en": "Good",
+        "hi": "अच्छा",
+        "exclusive": false
+      },
+      {
+        "id": "okay",
+        "en": "Okay",
+        "hi": "ठीक",
+        "exclusive": false
+      },
+      {
+        "id": "mixed",
+        "en": "Mixed",
+        "hi": "मिला-जुला",
+        "exclusive": false
+      },
+      {
+        "id": "hard",
+        "en": "Hard",
+        "hi": "कठिन",
+        "exclusive": false
+      },
+      {
+        "id": "very-hard",
+        "en": "Very hard",
+        "hi": "बहुत कठिन",
+        "exclusive": false
+      }
+    ]
+  },
+  {
+    "en": "What felt heavy today?",
+    "hi": "आज क्या भारी लगा?",
+    "options": [
+      {
+        "id": "work",
+        "en": "Work or studies",
+        "hi": "काम या पढ़ाई",
+        "exclusive": false
+      },
+      {
+        "id": "relationships",
+        "en": "Family or relationships",
+        "hi": "परिवार या रिश्ते",
+        "exclusive": false
+      },
+      {
+        "id": "health",
+        "en": "Health",
+        "hi": "स्वास्थ्य",
+        "exclusive": false
+      },
+      {
+        "id": "money",
+        "en": "Money or responsibilities",
+        "hi": "पैसे या ज़िम्मेदारियाँ",
+        "exclusive": false
+      },
+      {
+        "id": "lonely",
+        "en": "Feeling alone",
+        "hi": "अकेलापन",
+        "exclusive": false
+      },
+      {
+        "id": "other",
+        "en": "Something else",
+        "hi": "कुछ और",
+        "exclusive": false
+      },
+      {
+        "id": "nothing",
+        "en": "Nothing felt heavy",
+        "hi": "कुछ भारी नहीं लगा",
+        "exclusive": true
+      }
+    ]
+  },
+  {
+    "en": "What brought you a little comfort?",
+    "hi": "आज किस बात से थोड़ा सुकून मिला?",
+    "options": [
+      {
+        "id": "connection",
+        "en": "Talking to someone",
+        "hi": "किसी से बात करना",
+        "exclusive": false
+      },
+      {
+        "id": "rest",
+        "en": "Rest or quiet time",
+        "hi": "आराम या शांत समय",
+        "exclusive": false
+      },
+      {
+        "id": "music",
+        "en": "Music",
+        "hi": "संगीत",
+        "exclusive": false
+      },
+      {
+        "id": "outside",
+        "en": "Being outside",
+        "hi": "बाहर समय बिताना",
+        "exclusive": false
+      },
+      {
+        "id": "small-moment",
+        "en": "A small everyday moment",
+        "hi": "रोज़मर्रा का छोटा पल",
+        "exclusive": false
+      },
+      {
+        "id": "other",
+        "en": "Something else",
+        "hi": "कुछ और",
+        "exclusive": false
+      },
+      {
+        "id": "nothing",
+        "en": "Nothing yet",
+        "hi": "अभी कुछ नहीं",
+        "exclusive": true
+      }
+    ]
+  },
+  {
+    "en": "What did you do for yourself?",
+    "hi": "आज आपने अपने लिए क्या किया?",
+    "options": [
+      {
+        "id": "rest",
+        "en": "Made time to rest",
+        "hi": "आराम का समय निकाला",
+        "exclusive": false
+      },
+      {
+        "id": "food",
+        "en": "Ate or drank something",
+        "hi": "कुछ खाया या पिया",
+        "exclusive": false
+      },
+      {
+        "id": "move",
+        "en": "Moved a little",
+        "hi": "थोड़ा चले-फिरे",
+        "exclusive": false
+      },
+      {
+        "id": "task",
+        "en": "Did one small task",
+        "hi": "एक छोटा काम किया",
+        "exclusive": false
+      },
+      {
+        "id": "boundary",
+        "en": "Set a boundary",
+        "hi": "अपनी सीमा तय की",
+        "exclusive": false
+      },
+      {
+        "id": "other",
+        "en": "Something else",
+        "hi": "कुछ और",
+        "exclusive": false
+      },
+      {
+        "id": "nothing",
+        "en": "Not sure / not yet",
+        "hi": "पता नहीं / अभी नहीं",
+        "exclusive": true
+      }
+    ]
+  },
+  {
+    "en": "Is there something you wish you could say?",
+    "hi": "क्या कुछ है जो आप कहना चाहते हैं?",
+    "options": [
+      {
+        "id": "help",
+        "en": "I could use some help",
+        "hi": "मुझे थोड़ी मदद चाहिए",
+        "exclusive": false
+      },
+      {
+        "id": "rest",
+        "en": "I need a break",
+        "hi": "मुझे विराम चाहिए",
+        "exclusive": false
+      },
+      {
+        "id": "miss",
+        "en": "I miss someone",
+        "hi": "मुझे किसी की याद आती है",
+        "exclusive": false
+      },
+      {
+        "id": "disappear",
+        "en": "I wish I could disappear",
+        "hi": "काश मैं गायब हो पाता/पाती",
+        "exclusive": false
+      },
+      {
+        "id": "other",
+        "en": "Something else",
+        "hi": "कुछ और",
+        "exclusive": false
+      },
+      {
+        "id": "not-ready",
+        "en": "I am not ready to say",
+        "hi": "अभी कहना नहीं चाहता/चाहती",
+        "exclusive": true
+      }
+    ]
+  },
+  {
+    "en": "What matters to you right now?",
+    "hi": "इस समय आपके लिए क्या ज़रूरी है?",
+    "options": [
+      {
+        "id": "rest",
+        "en": "Rest",
+        "hi": "आराम",
+        "exclusive": false
+      },
+      {
+        "id": "connection",
+        "en": "Connection",
+        "hi": "जुड़ाव",
+        "exclusive": false
+      },
+      {
+        "id": "health",
+        "en": "Health",
+        "hi": "स्वास्थ्य",
+        "exclusive": false
+      },
+      {
+        "id": "security",
+        "en": "Stability or security",
+        "hi": "स्थिरता या सुरक्षा",
+        "exclusive": false
+      },
+      {
+        "id": "small-step",
+        "en": "One manageable step",
+        "hi": "एक छोटा, आसान कदम",
+        "exclusive": false
+      },
+      {
+        "id": "other",
+        "en": "Something else",
+        "hi": "कुछ और",
+        "exclusive": false
+      },
+      {
+        "id": "unsure",
+        "en": "Not sure yet",
+        "hi": "अभी पता नहीं",
+        "exclusive": true
+      }
+    ]
+  },
+  {
+    "en": "What would you like to carry into next week?",
+    "hi": "अगले हफ़्ते आप क्या साथ ले जाना चाहते हैं?",
+    "options": [
+      {
+        "id": "kindness",
+        "en": "Being kinder to myself",
+        "hi": "अपने प्रति दयालु होना",
+        "exclusive": false
+      },
+      {
+        "id": "pace",
+        "en": "A gentler pace",
+        "hi": "थोड़ी धीमी गति",
+        "exclusive": false
+      },
+      {
+        "id": "connection",
+        "en": "Keeping in touch",
+        "hi": "संपर्क बनाए रखना",
+        "exclusive": false
+      },
+      {
+        "id": "boundary",
+        "en": "A helpful boundary",
+        "hi": "एक उपयोगी सीमा",
+        "exclusive": false
+      },
+      {
+        "id": "curiosity",
+        "en": "Curiosity",
+        "hi": "जिज्ञासा",
+        "exclusive": false
+      },
+      {
+        "id": "other",
+        "en": "Something else",
+        "hi": "कुछ और",
+        "exclusive": false
+      },
+      {
+        "id": "unsure",
+        "en": "Not sure yet",
+        "hi": "अभी पता नहीं",
+        "exclusive": true
+      }
+    ]
+  }
+]

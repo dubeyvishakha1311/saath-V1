@@ -10,7 +10,7 @@ This is a self-hosted public GitHub Releases channel using the open-source `@cap
 
 ## Owner activation — keep secrets out of chat/source
 
-Use a trusted local checkout on the fixed branch `arena/55e548ad-saath-v1`, with Node 22+, `gh`, and a GitHub account/connection permitted to manage repository Actions secrets. Do not paste passwords/tokens/private keys into chat. The current Arena GitHub integration needs Secrets permission before the agent can run provisioning for you; alternatively run the owner script locally using an already authenticated `gh`.
+Use a trusted local checkout on the release branch `main` (after the provisioning changes have been reviewed and merged), with Node 22+, `gh`, and a GitHub account/connection permitted to manage repository Actions secrets. Do not paste passwords/tokens/private keys into chat. The current Arena GitHub integration needs Secrets permission before the agent can run provisioning for you; alternatively run the owner script locally using an already authenticated `gh`.
 
 ```sh
 npm ci

@@ -1,4 +1,4 @@
-# Saath · 0.7.0
+# Saath · 0.7.1
 
 An Android-first, English/Hindi **internal-testing wellness prototype** based on the attached idea summary and [PRD.md](PRD.md). Not a clinically approved product, diagnostic tool, therapy service, or monitored crisis service.
 
@@ -82,7 +82,7 @@ cd android
 
 Output: `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-The GitHub Actions **Build Android APK** workflow performs tests, web/native sync and debug compilation on pushes to `arena/55e548ad-saath-v1`, or manual dispatch. Download the latest successful run's **Saath-0.7.0-debug-apk** artifact from [Actions](https://github.com/dubeyvishakha1311/saath-V1/actions). Artifacts are retained for 14 days.
+The GitHub Actions **Build Android APK** workflow performs tests, web/native sync and debug compilation on pushes to `main` and the active development branch, or manual dispatch. Download the latest successful run's **Saath-debug-apk** artifact from [Actions](https://github.com/dubeyvishakha1311/saath-V1/actions). Artifacts are retained for 14 days.
 
 ### Install for internal testing
 
@@ -107,3 +107,7 @@ Bottom tabs are ordered Today → Explore → **Calm** → Journal → My space.
 - Hindi glyphs are bundled offline with Noto Sans Devanagari 400/600 (SIL Open Font License; distributed at `public/licenses/NotoSansDevanagari-OFL.txt`). English screening item wording remains unchanged.
 
 Validation: 28 automated tests plus browser checks of 11 screens in English/Hindi at 320, 390 and 768px (66 combinations), mood toggling, question focus and reduced motion. No horizontal overflow or uncaught page errors in these checks. Physical Android and clinical review remain outstanding. See [UI design notes](docs/UI_DESIGN.md) for rationale and limits.
+
+## Faculty demonstration pack
+
+**My space → Faculty demo & worksheets** opens an isolated synthetic-data viewer with 50 fictional adult profiles (25 male / 25 female), 500 observations, JSON/CSV downloads and an 11-page fillable PDF. No real notebook or account is modified. Every profile supplies a seven-entry fixture validated against the app's actual notebook schema; days 8–10 remain separate follow-up observations, not unsupported app journal days. The dataset is not clinical evidence. See [implementation, limitations and pilot guidance](public/faculty/README.md). Regenerate with `npm run demo:generate`; PDF generation requirements and instructions are in that guide. The screenshot PowerPoint awaits ten supplied stage screenshots. Existing APKs do not yet include these source changes.

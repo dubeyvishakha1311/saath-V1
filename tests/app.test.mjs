@@ -1099,3 +1099,15 @@ test("My space exposes update status in the preview without offering an unsuppor
   assert.ok(a.doc.querySelector('[data-action="ground"]'));
   a.close();
 });
+
+test('My space links the isolated faculty sandbox without replacing personal entries', () => {
+  const saved = {consent:true,lang:'en',entries:[{date:'2026-10-01',text:'Personal draft remains private'}]};
+  const a=app(saved);
+  a.click('settings');
+  assert.match(a.doc.querySelector('a[href="./faculty/index.html"]').textContent,/simulated demo/);
+  assert.deepEqual(a.data().entries,saved.entries);
+  a.click('language');
+  assert.match(a.doc.querySelector('a[href="./faculty/index.html"]').textContent,/सिमुलेटेड/);
+  assert.deepEqual(a.data().entries,saved.entries);
+  a.close();
+});

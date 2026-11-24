@@ -121,3 +121,66 @@ test("failed OAuth callback removes error details without displaying them or tou
     false,
   );
 });
+
+test("provider checks are fresh, anonymous, and retry successfully after Google is enabled", async () => {
+  const f = fixture();
+  let enabled = false;
+  const requests = [];
+  f.options.fetchImpl = async (url, options) => {
+    requests.push(options);
+    return Response.json({ external: { google: enabled } });
+  };
+  await assert.rejects(beginGoogleSignIn(f.options), {
+    code: "google_provider_disabled",
+  });
+  enabled = true;
+  await beginGoogleSignIn(f.options);
+  assert.equal(requests.length, 2);
+  for (const request of requests) {
+    assert.equal(request.cache, "no-store");
+    assert.equal(request.credentials, "omit");
+    assert.deepEqual(Object.keys(request.headers), ["apikey"]);
+    assert.ok(request.signal);
+  }
+  assert.equal(f.calls.filter((c) => c[0] === "oauth").length, 1);
+});
+
+test("network and malformed provider responses are not misreported as a disabled Google provider", async () => {
+  for (const fetchImpl of [
+    async () => {
+      throw Error("private diagnostic");
+    },
+    async () => Response.json({}),
+    async () => Response.json({ external: { google: "true" } }),
+    async () => new Response("not json"),
+  ]) {
+    const f = fixture();
+    f.options.fetchImpl = fetchImpl;
+    await assert.rejects(
+      beginGoogleSignIn(f.options),
+      (error) =>
+        error.code === "google_settings_unavailable" &&
+        !error.message.includes("private"),
+    );
+    assert.equal(f.calls.length, 0);
+  }
+});
+
+test("authorization URL cannot carry credentials, fragments or a different provider", async () => {
+  for (const url of [
+    "https://user:password@project.supabase.co/auth/v1/authorize?provider=google",
+    "https://project.supabase.co/auth/v1/authorize?provider=github",
+    "https://project.supabase.co/auth/v1/authorize?provider=google#secret",
+  ]) {
+    const f = fixture();
+    f.options.client.auth.signInWithOAuth = async () => ({ data: { url } });
+    await assert.rejects(
+      beginGoogleSignIn(f.options),
+      /Invalid authorization URL/,
+    );
+    assert.equal(
+      f.calls.some((c) => ["navigate", "external"].includes(c[0])),
+      false,
+    );
+  }
+});

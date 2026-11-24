@@ -210,8 +210,10 @@ function render() {
   account.bind();
   bindExtra(root, featureContext());
   if (page === "settings") {
+    updateContactDraftUI();
     root.querySelector("#phone")?.addEventListener("input", (event) => {
       contactDraft = event.target.value;
+      updateContactDraftUI();
     });
   }
   if (page === "journal") {
@@ -330,6 +332,36 @@ function normalizedContact(value) {
   if (!raw || !/^\+?[\d ()-]+$/.test(raw)) return null;
   const normalized = raw.replace(/[ ()-]/g, "");
   return /^\+?\d{7,15}$/.test(normalized) ? normalized : null;
+}
+function contactDirty() {
+  return (
+    contactDraft !== undefined &&
+    contactDraft.trim() !== String(state.phone ?? "").trim()
+  );
+}
+function updateContactDraftUI() {
+  const dirty = contactDirty(),
+    saved = normalizedContact(state.phone);
+  const badge = root.querySelector(".contact-badge");
+  const label = dirty
+    ? t("Unsaved changes", "बदलाव सेव नहीं हैं")
+    : saved
+      ? t("Saved", "सेव है")
+      : t("Optional", "वैकल्पिक");
+  if (badge && badge.textContent !== label) badge.textContent = label;
+  root
+    .querySelector(".trusted-contact")
+    ?.classList.toggle("has-unsaved-changes", dirty);
+  const status = root.querySelector("#status");
+  const note = dirty
+    ? t(
+        "Changes are not saved yet. Tap Save, or cancel to keep the saved number.",
+        "बदलाव अभी सेव नहीं हैं। सेव करें, या पुराना नंबर रखने के लिए रद्द करें।",
+      )
+    : "";
+  if (status && status.textContent !== note) status.textContent = note;
+  if (normalizedContact(contactDraft))
+    root.querySelector("#phone")?.removeAttribute("aria-invalid");
 }
 function trustedContactCard() {
   const saved = normalizedContact(state.phone);

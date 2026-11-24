@@ -1523,3 +1523,44 @@ input[aria-invalid="true"] {
 }
 /* No new page animation for crisis/Calm; the global reduce rule above remains
    authoritative because all new movement is gated by no-preference. */
+
+/* Sign-in feedback retains its button footprint; no decorative page movement. */
+.google-button {
+  justify-content: center;
+  gap: 10px;
+  min-height: 50px;
+}
+.google-state-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font-size: 11px;
+}
+.google-button[aria-busy="true"] {
+  opacity: 0.8;
+  cursor: progress;
+}
+.google-button[aria-busy="true"] .google-state-mark {
+  font-size: 0;
+  border-color: #b4c1b2;
+  border-top-color: var(--forest);
+}
+.trusted-contact.has-unsaved-changes .contact-badge {
+  background: #fff1dd;
+  color: #754a13;
+  border-color: #e0c9a4;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .google-button[aria-busy="true"] .google-state-mark {
+    animation: sign-in-wait 800ms linear infinite;
+  }
+  @keyframes sign-in-wait {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}

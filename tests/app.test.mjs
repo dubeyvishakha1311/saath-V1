@@ -25,7 +25,7 @@ const source = readFileSync(new URL("../src/main.js", import.meta.url), "utf8")
   )
   .replace(
     /import\s*\{[^}]*\}\s*from\s*['"]\.\/supabase\.js['"];?/,
-    'const supabase=window.__supabase;const authRedirectURL=()=>"https://saath.test/?auth=callback";const listenForNativeAuth=async()=>{};const authCallbackFailed=()=>false;const startGoogleSignIn=async()=>{window.__googleCalls=(window.__googleCalls||0)+1;if(window.__googleError)throw window.__googleError;};',
+    'const supabase=window.__supabase;const authRedirectURL=()=>"https://saath.test/?auth=callback";const listenForNativeAuth=async()=>{};const authCallbackFailed=()=>false;const startGoogleSignIn=async()=>{window.__googleCalls=(window.__googleCalls||0)+1;if(window.__googleWait)await window.__googleWait;if(window.__googleError)throw window.__googleError;};',
   )
   .replace(
     /import\s*\{[^}]*\}\s*from\s*['"]\.\/journal\.js['"];?/,
@@ -1427,5 +1427,115 @@ test("subtle route motion is navigation-only and never added to crisis or Calm",
   assert.equal(a.doc.querySelector("#screen.route-enter"), null);
   a.click("crisis");
   assert.equal(a.doc.querySelector("#screen.route-enter"), null);
+  a.close();
+});
+
+test("Google progress is accessible, prevents duplicate requests and survives a language rerender", async () => {
+  const a = app({ consent: true, lang: "en", entries: [] }, fakeSupabase());
+  let complete;
+  a.w.__googleWait = new Promise((resolve) => (complete = resolve));
+  a.w.eval("go('login')");
+  a.doc.querySelector("#google-consent").checked = true;
+  a.click("google-signin");
+  assert.equal(a.w.__googleCalls, 1);
+  assert.equal(
+    a.doc.querySelector('[data-action="google-signin"]').disabled,
+    true,
+  );
+  assert.equal(
+    a.doc
+      .querySelector('[data-action="google-signin"]')
+      .getAttribute("aria-busy"),
+    "true",
+  );
+  assert.match(
+    a.doc.querySelector("[data-google-label]").textContent,
+    /Please wait/,
+  );
+  a.click("google-signin");
+  assert.equal(a.w.__googleCalls, 1);
+  a.click("language");
+  assert.equal(
+    a.doc.querySelector('[data-action="google-signin"]').disabled,
+    true,
+  );
+  assert.match(
+    a.doc.querySelector("[data-google-label]").textContent,
+    /प्रतीक्षा/,
+  );
+  complete();
+  await settle(a);
+  assert.equal(
+    a.doc.querySelector('[data-action="google-signin"]').disabled,
+    false,
+  );
+  assert.equal(
+    a.doc
+      .querySelector('[data-action="google-signin"]')
+      .getAttribute("aria-busy"),
+    null,
+  );
+  a.close();
+});
+
+test("Google completion never overwrites crisis support with an authentication status", async () => {
+  const a = app({ consent: true, lang: "en", entries: [] }, fakeSupabase());
+  let complete;
+  a.w.__googleWait = new Promise((resolve) => (complete = resolve));
+  a.w.eval("go('login')");
+  a.doc.querySelector("#google-consent").checked = true;
+  a.click("google-signin");
+  a.click("crisis");
+  complete();
+  await settle(a);
+  assert.equal(a.doc.querySelector(".app-shell").dataset.page, "crisis");
+  assert.equal(a.doc.querySelector("#global-status").textContent, "");
+  assert.ok(a.doc.querySelector('a[href="tel:14416"]'));
+  a.close();
+});
+
+test("temporary Google settings failures show connection guidance rather than claiming provider is disabled", async () => {
+  const a = app({ consent: true, lang: "en", entries: [] }, fakeSupabase());
+  a.w.eval("go('login')");
+  a.doc.querySelector("#google-consent").checked = true;
+  a.w.__googleError = { code: "google_settings_unavailable" };
+  a.click("google-signin");
+  await settle(a);
+  assert.match(
+    a.doc.querySelector("#account-status").textContent,
+    /Check your connection/,
+  );
+  assert.doesNotMatch(
+    a.doc.querySelector("#account-status").textContent,
+    /owner must configure/,
+  );
+  a.close();
+});
+
+test("trusted contact clearly distinguishes unsaved edits, navigation recovery and persisted values", () => {
+  const a = app({
+    consent: true,
+    lang: "en",
+    entries: [],
+    phone: "+12025550123",
+  });
+  a.click("settings");
+  const input = a.doc.querySelector("#phone");
+  input.value = "+12025550124";
+  input.dispatchEvent(new a.w.Event("input"));
+  assert.match(a.doc.querySelector(".contact-badge").textContent, /Unsaved/);
+  assert.match(a.doc.querySelector("#status").textContent, /not saved yet/);
+  assert.equal(a.data().phone, "+12025550123");
+  a.click("crisis");
+  assert.ok(a.doc.querySelector('a[href="tel:+12025550123"]'));
+  a.click("back");
+  assert.match(a.doc.querySelector(".contact-badge").textContent, /Unsaved/);
+  a.click("cancel-contact");
+  assert.match(a.doc.querySelector(".contact-badge").textContent, /Saved/);
+  assert.equal(a.doc.querySelector("#phone").value, "+12025550123");
+  a.doc.querySelector("#phone").value = "+12025550124";
+  a.click("contact");
+  assert.equal(a.data().phone, "+12025550124");
+  assert.match(a.doc.querySelector(".contact-badge").textContent, /Saved/);
   a.close();
 });

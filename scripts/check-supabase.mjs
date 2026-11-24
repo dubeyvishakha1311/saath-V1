@@ -8,6 +8,7 @@ try {
   };
   const settings = await fetch(`${config.url}/auth/v1/settings`, {
     headers,
+    cache: "no-store",
     signal: AbortSignal.timeout(15000),
   });
   assert.equal(settings.ok, true, "Supabase Auth must be reachable");

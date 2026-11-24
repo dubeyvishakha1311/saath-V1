@@ -54,7 +54,7 @@ Connected to your **saath** Supabase project. Sign in/create account is availabl
 
 **Continue with Google** is available on sign-in and signup, with a separate 18+/identity-sharing choice. Android uses a system browser/Custom Tab; web uses a full-page redirect. Both return through Supabase PKCE. No notebook upload follows login.
 
-**Latest verification:** the owner reports Google sign-in is working, but the current live public Auth settings for this configured project report **Google enabled=false**, email enabled=true. This mismatch is unresolved; existing sessions or a different project/build may explain it. The flow is preserved. A separate CI readiness job fails explicitly when Google is disabled; it does not masquerade as a database failure, and new APK release publishing requires that readiness job. A provider-enabled check is not an independent real-account OAuth/device callback test. Follow [Google setup and verification](docs/SUPABASE.md#google-sign-in-activation-051) for new environments; keep credentials in Supabase, not source/chat.
+**Latest verification:** fresh public Auth settings for the app's configured project now report **Google enabled=true** and **email enabled=true**. The earlier disabled-provider mismatch is resolved, and the rerun Google-readiness check passes. Checks bypass cached provider settings; transient network/settings errors are distinguished from an explicitly disabled provider. No OAuth credentials were read or changed. Provider readiness is not a real-account Android/browser callback test. Follow [Google setup and verification](docs/SUPABASE.md#google-sign-in-activation-051) for deployment/device checks.
 
 ## Run and test
 

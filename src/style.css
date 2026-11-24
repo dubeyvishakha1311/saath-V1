@@ -1564,3 +1564,23 @@ input[aria-invalid="true"] {
     }
   }
 }
+.google-signin-help {
+  margin: 14px 0;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.google-signin-help summary {
+  min-height: 44px;
+  display: list-item;
+  cursor: pointer;
+  color: var(--forest);
+  font-size: 0.86rem;
+  line-height: 1.6;
+  padding: 10px 0;
+}
+.google-signin-help p {
+  font-size: 0.84rem;
+  color: var(--muted);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}

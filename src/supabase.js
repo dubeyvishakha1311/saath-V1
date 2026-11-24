@@ -1,3 +1,4 @@
+import { createNativeAuthHandler } from "./native-auth-callback.js";
 import { createClient } from "@supabase/supabase-js";
 import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
@@ -40,33 +41,16 @@ export function startGoogleSignIn() {
 }
 export async function listenForNativeAuth(onError) {
   if (!Capacitor.isNativePlatform()) return;
-  async function handle({ url }) {
-    let parsed;
-    try {
-      parsed = new URL(url);
-    } catch {
-      return;
-    }
-    if (
-      parsed.protocol !== "in.saath.wellness:" ||
-      parsed.host !== "auth" ||
-      parsed.pathname !== "/callback"
-    )
-      return;
-    const code = parsed.searchParams.get("code");
-    if (!code) {
-      onError();
-      return;
-    }
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) await Browser.close().catch(() => {}); // Closing is unsupported on some Android browsers.
-    if (error) onError(); // Never log callback URLs, codes or session tokens.
-  }
-  await App.addListener("appUrlOpen", (details) => {
-    handle(details).catch(onError);
+  const handle = createNativeAuthHandler({
+    exchangeCode: (code) => supabase.auth.exchangeCodeForSession(code),
+    closeBrowser: () => Browser.close(),
+    onError,
+  });
+  await App.addListener("appUrlOpen", ({ url }) => {
+    handle(url).catch(() => onError());
   });
   const launch = await App.getLaunchUrl();
-  if (launch?.url) await handle(launch);
+  if (launch?.url) await handle(launch.url);
 }
 
 export function authCallbackFailed() {

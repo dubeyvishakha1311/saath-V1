@@ -1539,3 +1539,10 @@ test("trusted contact clearly distinguishes unsaved edits, navigation recovery a
   assert.match(a.doc.querySelector(".contact-badge").textContent, /Saved/);
   a.close();
 });
+
+test('Google blocked-access guidance is bilingual, protects secrets and preserves guest/urgent access',()=>{
+ const a=app({consent:true,lang:'en',entries:[]},fakeSupabase());a.w.eval("go('login')");
+ assert.match(a.doc.querySelector('.google-signin-help').textContent,/Access blocked/);assert.match(a.doc.querySelector('.google-signin-help').textContent,/redirect_uri_mismatch/);assert.match(a.doc.querySelector('.google-signin-help').textContent,/Do not share your password/);
+ a.click('language');assert.match(a.doc.querySelector('.google-signin-help').textContent,/पासवर्ड/);
+ a.click('panic');assert.ok(a.doc.querySelector('[data-action="ground"]'));a.close();
+});

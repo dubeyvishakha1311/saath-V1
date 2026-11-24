@@ -54,7 +54,7 @@ Connected to your **saath** Supabase project. Sign in/create account is availabl
 
 **Continue with Google** is available on sign-in and signup, with a separate 18+/identity-sharing choice. Android uses a system browser/Custom Tab; web uses a full-page redirect. Both return through Supabase PKCE. No notebook upload follows login.
 
-**Not active yet:** the connected project has Google disabled and no OAuth client credentials. The app checks provider availability and explains the setup requirement rather than launching a broken flow. Follow [Google activation steps](docs/SUPABASE.md#google-sign-in-activation-051); enter the client secret directly in Supabase, not in source or chat. No real Google account sign-in/device callback has been tested.
+**Latest verification:** fresh public Auth settings for the app's configured project now report **Google enabled=true** and **email enabled=true**. The earlier disabled-provider mismatch is resolved, and the rerun Google-readiness check passes. Checks bypass cached provider settings; transient network/settings errors are distinguished from an explicitly disabled provider. No OAuth credentials were read or changed. Provider readiness is not a real-account Android/browser callback test. Follow [Google setup and verification](docs/SUPABASE.md#google-sign-in-activation-051) for deployment/device checks.
 
 ## Run and test
 
@@ -82,7 +82,7 @@ cd android
 
 Output: `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-The GitHub Actions **Build Android APK** workflow performs tests, web/native sync and debug compilation on pushes to `main` and the active development branch, or manual dispatch. Download the latest successful run's **Saath-debug-apk** artifact from [Actions](https://github.com/dubeyvishakha1311/saath-V1/actions). Artifacts are retained for 14 days.
+The GitHub Actions **Build Android APK** workflow performs tests, web/native sync and debug compilation on pushes to `main` and `arena/**` development branches, or manual dispatch. Download the latest successful run's **Saath-debug-apk** artifact from [Actions](https://github.com/dubeyvishakha1311/saath-V1/actions). Artifacts are retained for 14 days.
 
 ### Install for internal testing
 
@@ -111,3 +111,18 @@ Validation: 28 automated tests plus browser checks of 11 screens in English/Hind
 ## Faculty demonstration pack
 
 **My space → Faculty demo & worksheets** opens an isolated synthetic-data viewer with 50 fictional adult profiles (25 male / 25 female), 500 observations, JSON/CSV downloads and an 11-page fillable PDF. No real notebook or account is modified. Every profile supplies a seven-entry fixture validated against the app's actual notebook schema; days 8–10 remain separate follow-up observations, not unsupported app journal days. The dataset is not clinical evidence. See [implementation, limitations and pilot guidance](public/faculty/README.md). Regenerate with `npm run demo:generate`; PDF generation requirements and instructions are in that guide. The screenshot PowerPoint awaits ten supplied stage screenshots. Existing APKs do not yet include these source changes.
+
+## Welcome and reflection refinements (unreleased)
+
+The welcome interface now describes an intended **15+** audience and a first step toward wellness for students and adults, without claiming therapy or diagnosis. “Before we begin” has been removed; device-storage disclosure remains available. Teenage clinical/safeguarding/consent review is still pending; optional remote accounts retain their existing adult-only consent boundary, and the pilot plan and simulated cohort remain adult-only.
+
+Story/Song/Poem now provide choice-based closing feedback live and after saving. Each journal day includes three optional multiple-choice follow-ups (thoughts, perspective, next step), daily feedback and a seven-day conclusion. New optional fields survive encrypted backup and legacy notebooks still work. No diagnosis, personality inference or improvement score is generated. See [implementation and review boundaries](docs/WELLNESS_REFLECTION_UPDATE.md). These source/preview refinements are not yet in the distributed v0.7.1 APK or the faculty PDF.
+
+
+## Trusted contact, interaction polish and push publishing (unreleased)
+
+My space now shows a persistent saved-number card and explicit call action, validates 7–15 digit numbers (optional leading country-code `+`), preserves the previous number if saving fails, and confirms removal. Contacts stay local to each notebook and enter the cloud only in an explicit encrypted backup. No verification call/message or address-book access occurs.
+
+UI refinements use tactile pressed states, restrained surface depth, clearer selected choices, concise navigation-only transitions, and reduced-motion support; crisis/Calm navigation is never animated. The larger central Calm tab and all navigation controls are preserved. This is a principles-inspired implementation, not an imported designer skill or endorsement.
+
+After owner activation and configured-bootstrap QA, pushes merged into `main` trigger the signed publisher. `SAATH_OTA_BOOTSTRAP_READY=true`, trust pins, protected environment approval, a new web version and unchanged native compatibility are required. Currently the gate remains **off**, because public pins are empty and GitHub Secrets access is denied. Existing unconfigured APKs cannot receive this remotely. See [OTA setup](docs/OTA_UPDATES.md) and [verification notes](docs/CONTACT_UI_AND_SERVICE_CHECKS.md).

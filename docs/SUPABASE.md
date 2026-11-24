@@ -68,7 +68,7 @@ Before any public pilot: complete email/device end-to-end tests, review SQL/cryp
 
 ## Google sign-in activation (0.5.1)
 
-**Current remote status:** Google provider disabled; OAuth client ID and secret absent. The app-side flow is implemented but Google sign-in cannot succeed until the owner configures the provider. The connected management tool does not expose Google-provider configuration fields; no credentials or consent-screen settings can be fabricated.
+**Latest verification:** public Auth settings for `ittnpegkfonxvkcfqmgd` now report **Google enabled=true** and **email enabled=true**. The previous disabled-provider mismatch is resolved and the Google-readiness CI rerun passed. Availability checks use `cache: no-store`; network/malformed-settings failures are not labelled a disabled provider. No credentials or provider settings were read/changed. This does not independently validate a real Google account or Android callback; the checklist below remains relevant.
 
 1. In **Google Cloud Console → Google Auth Platform**, select/create your project and configure branding, audience and consent information. For an external app in testing, add the intended Google test users. Use only basic identity scopes (openid/email/profile), not Drive, Contacts or Gmail access. Supply real support/privacy details before publishing.
 2. Under **Clients / Credentials**, create an **OAuth 2.0 client of type Web application**. This browser-based Supabase flow uses a web client even on Android; it does not use a native Google SDK or Android SHA fingerprint configuration.

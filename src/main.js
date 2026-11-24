@@ -19,6 +19,8 @@ import {
 } from "./supabase.js";
 import {
   dailyQuestions,
+  journalFollowUps,
+  renderConclusion,
   journalDay,
   journalSelection,
   hasJournalSafetyChoice,
@@ -123,6 +125,7 @@ const paths = {
   leaf: "M20 4C7 2 2 9 6 16s16 5 14-12Z M5 21 16 10",
   heart: "M12 21 3 12C-2 5 7 0 12 7c5-7 14-2 9 5Z",
   back: "M15 5l-7 7 7 7",
+  phone: "M6 3H3v3c0 8 7 15 15 15h3v-4l-5-2-2 2c-3-1-6-4-7-7l2-2-2-5Z",
   sun: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M12 2v2 M12 20v2 M2 12h2 M20 12h2 M5 5l1 1 M18 18l1 1 M5 19l1-1 M18 6l1-1",
 };
 function icon(name) {
@@ -177,6 +180,12 @@ function render() {
           .join("")}</nav>`
       : ""
   }</div>`;
+  if (
+    previousPage &&
+    previousPage !== page &&
+    !["crisis", "panic"].includes(page)
+  )
+    root.querySelector("#screen").classList.add("route-enter");
   root
     .querySelectorAll("[data-action]")
     .forEach((el) => (el.onclick = () => act(el.dataset.action)));
@@ -201,8 +210,10 @@ function render() {
   account.bind();
   bindExtra(root, featureContext());
   if (page === "settings") {
+    updateContactDraftUI();
     root.querySelector("#phone")?.addEventListener("input", (event) => {
       contactDraft = event.target.value;
+      updateContactDraftUI();
     });
   }
   if (page === "journal") {
@@ -231,6 +242,31 @@ function render() {
     }, 1000);
   }
 }
+function journalFollowUpSelection(index, entry) {
+  return state.journalChoices?.day === index + 1
+    ? state.journalChoices.followUps || {}
+    : entry?.followUps || {};
+}
+function journalWeekConclusion() {
+  const question = journalFollowUps.find((q) => q.id === "step");
+  const steps = [
+    ...new Set(state.entries.flatMap((entry) => entry.followUps?.step || [])),
+  ];
+  return `<section class="card choice-conclusion"><h2>${t("Your seven-day conclusion", "आपके सात दिनों का निष्कर्ष")}</h2><p>${t("You made time for seven reflections. That records your participation, not proof of improvement or a diagnosis.", "आपने सात बार चिंतन के लिए समय निकाला। यह आपकी भागीदारी है, सुधार का प्रमाण या निदान नहीं।")}</p>${
+    steps.length
+      ? `<p>${t("Next steps you chose during the week: ", "सप्ताह के दौरान आपके चुने अगले कदम: ")}${escape(
+          question.options
+            .filter((o) => steps.includes(o.id))
+            .map((o) => t(o.en, o.hi))
+            .join(" · "),
+        )}</p>`
+      : `<p>${t("You can revisit the choices below and decide what, if anything, to carry forward.", "नीचे के चुनाव फिर देखें और तय करें कि क्या आगे साथ रखना है, अगर कुछ रखना चाहें।")}</p>`
+  }<p>${t("Keep one manageable action if it fits, change it, or pause. No score or personality label is assigned. If difficulties persist, consider qualified support.", "सही लगे तो एक आसान कदम रखें, बदलें या विराम लें। कोई स्कोर या व्यक्तित्व लेबल नहीं दिया जाता। कठिनाई बनी रहे तो योग्य सहायता पर विचार करें।")}</p></section>`;
+}
+function journalExtraQuestions(index, entry, ids) {
+  const selected = journalFollowUpSelection(index, entry);
+  return `<section><h2>${t("A few more ways to reflect", "चिंतन के कुछ और तरीके")}</h2><p>${t("All optional. Pick any that fit; tap again to clear. No writing needed.", "सब वैकल्पिक। जो सही लगे चुनें; हटाने के लिए फिर दबाएँ। लिखना ज़रूरी नहीं।")}</p>${journalFollowUps.map((q) => `<div class="card"><h3>${t(q.en, q.hi)}</h3>${choiceButtons(selected[q.id] || [], q.options, featureContext(), `journal-followup:${q.id}`)}</div>`).join("")}</section>${riskSignal(state.draft ?? entry?.text ?? "") ? "" : renderConclusion("journal", ids, featureContext(), dailyQuestions[index].options, selected)}`;
+}
 function renderHome() {
   const completed = state.entries.length;
   const day = Math.min(completed + (today() ? 0 : 1), 7);
@@ -251,6 +287,7 @@ function renderHome() {
       "",
     )}</div><p class="mood-note" role="status">${checkedIn ? t("Saved for today. Tap the same feeling to clear it.", "आज के लिए सेव है। हटाने के लिए उसी भावना पर फिर टैप करें।") : t("No right or wrong way to feel. You can skip this.", "महसूस करने का कोई सही या गलत तरीका नहीं। इसे छोड़ सकते हैं।")}</p></section>
   <section class="journal-tile"><div class="tile-top"><span class="eyebrow">${t("YOUR SEVEN-DAY JOURNAL", "आपकी सात दिन की डायरी")}</span><span class="journal-day">${String(day).padStart(2, "0")}<small>/ 07</small></span></div><h2>${completed >= 7 ? t("A week,<br>in your own words.", "एक सप्ताह,<br>आपके अपने शब्दों में।") : t("A few taps<br>about today.", "आज के बारे में<br>कुछ चुनाव।")}</h2><p>${completed >= 7 ? t("Revisit what you wrote. See what stands out.", "अपनी लिखी बातें फिर पढ़ें। देखें क्या अलग लगता है।") : escape(prompts[Math.min(day - 1, 6)][hi() ? 1 : 0])}</p>${button(`<span>${completed >= 7 ? t("Read my week", "मेरा सप्ताह पढ़ें") : t(today() ? "Review today" : "Open my journal", today() ? "आज के जवाब देखें" : "मेरी डायरी खोलें")}</span>${icon("arrow")}`, completed >= 7 ? "reflection" : "journal", "primary wide")}<div class="journal-bottom"><div class="dots" aria-label="${t(`${completed} of 7 days completed`, `7 में से ${completed} दिन पूरे`)}">${Array.from({ length: 7 }, (_, i) => `<span class="dot ${i < completed ? "done" : ""}">${i < completed ? "✓" : i + 1}</span>`).join("")}</div><span>${completed}/7 ${t("completed", "दिन पूरे")}</span></div><small>${t("Missed days don’t reset your progress.", "छूटे दिनों से आपकी प्रगति नहीं मिटती।")}</small></section>
+  ${today() && !riskSignal(today().text) ? renderConclusion("journal", today().optionIds || [], featureContext(), dailyQuestions[(today().day || 1) - 1]?.options || [], today().followUps || {}) : ""}
   <section class="quick-section"><div class="section-title"><h2>${t("Need a moment?", "थोड़ा रुकना चाहेंगे?")}</h2><span>${t("No writing needed", "लिखना ज़रूरी नहीं")}</span></div><div class="quick-tools"><button class="quick-tile" data-action="quick-breath"><span class="tool-symbol">${icon("panic")}</span><span><strong>${t("Slow breathing", "धीरे साँस लें")}</strong><small>${t("Follow a comfortable rhythm", "आरामदायक लय में साँस लें")}</small></span><span class="tile-arrow">${icon("arrow")}</span></button><button class="quick-tile" data-action="quick-ground"><span class="tool-symbol">${icon("sun")}</span><span><strong>${t("Notice what’s around you", "अपने आसपास ध्यान दें")}</strong><small>${t("5–4–3–2–1 grounding", "5–4–3–2–1 ग्राउंडिंग")}</small></span><span class="tile-arrow">${icon("arrow")}</span></button></div></section>
   <button class="explore-entry" data-action="explore"><span><strong>${t("Start somewhere else", "कहीं और से शुरू करें")}</strong><small>${t("A story, a song or an unfinished poem.", "एक कहानी, एक गीत या अधूरी कविता।")}</small></span>${icon("arrow")}</button><p class="prototype-label">${t("Self-reflection, not treatment. Internal testing prototype.", "आत्म-चिंतन, उपचार नहीं। आंतरिक परीक्षण प्रोटोटाइप।")}</p>`;
 }
@@ -266,7 +303,7 @@ function content() {
     return weeklyThemes(featureContext());
   switch (page) {
     case "welcome":
-      return `<div class="welcome-art" aria-hidden="true"><span class="notebook-mark">${icon("journal")}</span><span class="edition-label">SAATH / 01</span></div><div class="eyebrow">${t("YOUR PERSONAL NOTEBOOK", "आपकी अपनी डायरी")}</div><h1>${t("Start with<br>a small check-in.", "शुरुआत करें<br>एक छोटे चेक-इन से।")}</h1><p>${t("Pick what fits, or add a note if you want. You can also try a story, song or poem.", "जो लागू हो चुनें, या चाहें तो एक नोट जोड़ें। कहानी, गीत या कविता भी आज़मा सकते हैं।")}</p><div class="card"><h2>${t("Before we begin", "शुरू करने से पहले")}</h2><p>${t("This is an early wellness prototype for adults 18+. It is not therapy, diagnosis, medical advice, or a monitored crisis service.", "यह 18+ वयस्कों के लिए शुरुआती वेलनेस प्रोटोटाइप है। यह थेरेपी, निदान, चिकित्सा सलाह या निगरानी वाली संकट सेवा नहीं है।")}</p><p class="notice">${t("Your writing stays in this app on this device. This prototype does not provide app-level encrypted storage. Anyone with device/app access may read it. Do not enter sensitive details on a shared device. No ads or analytics. An optional account sends authentication requests to Supabase; notebook data is uploaded only through the separate encrypted-backup flow. Clearing app data or uninstalling may erase your journal.", "आपकी लिखावट इसी डिवाइस के ऐप में रहती है। इस प्रोटोटाइप में ऐप-स्तर एन्क्रिप्शन नहीं है। डिवाइस/ऐप तक पहुँच वाला व्यक्ति इसे पढ़ सकता है। साझा डिवाइस पर संवेदनशील बातें न लिखें। विज्ञापन या एनालिटिक्स नहीं हैं। वैकल्पिक खाता Supabase को प्रमाणीकरण अनुरोध भेजता है; डायरी केवल अलग एन्क्रिप्टेड बैकअप विकल्प से अपलोड होती है। ऐप हटाने या डेटा साफ़ करने से डायरी मिट सकती है।")}</p>${button(t("I’m 18+ and agree to local storage", "मैं 18+ हूँ और स्थानीय स्टोरेज से सहमत हूँ"), "consent", "primary")}</div>${account.intro()}`;
+      return `<div class="welcome-art" aria-hidden="true"><span class="notebook-mark">${icon("journal")}</span><span class="edition-label">SAATH / 01</span></div><div class="eyebrow">${t("YOUR PERSONAL NOTEBOOK", "आपकी अपनी डायरी")}</div><h1>${t("Start with<br>a small check-in.", "शुरुआत करें<br>एक छोटे चेक-इन से।")}</h1><p>${t("Pick what fits, or add a note if you want. You can also try a story, song or poem.", "जो लागू हो चुनें, या चाहें तो एक नोट जोड़ें। कहानी, गीत या कविता भी आज़मा सकते हैं।")}</p><p class="eyebrow">${t("WELLNESS REFLECTION · 15+", "वेलनेस चिंतन · 15+")}</p><p>${t("The first step toward wellness for students and adults as well.", "विद्यार्थियों और वयस्कों के लिए भी बेहतर महसूस करने की ओर पहला कदम।")}</p><p>${t("More than labels: a space for everyday reflection, creativity and small steps. Saath does not provide therapy or diagnosis, and is not a monitored crisis service.", "लेबल से आगे: रोज़मर्रा के चिंतन, रचनात्मकता और छोटे कदमों की जगह। साथ थेरेपी या निदान नहीं देता और निगरानी वाली संकट सेवा नहीं है।")}</p><p class="notice">${t("15+ is the intended audience, not clinical approval for teenagers. If you are under 18, involve a trusted adult where safe and appropriate. Youth safeguarding, consent and privacy review are still required before a real-world pilot.", "15+ इच्छित आयु है, किशोरों के लिए क्लिनिकल मंज़ूरी नहीं। 18 से कम उम्र हो तो सुरक्षित और उचित होने पर भरोसेमंद वयस्क को शामिल करें। वास्तविक पायलट से पहले किशोर सुरक्षा, सहमति और गोपनीयता समीक्षा ज़रूरी है।")}</p><details class="optional-note"><summary>${t("Privacy on this device", "इस डिवाइस पर गोपनीयता")}</summary><p>${t("Writing is stored on this device without app-level encryption. Anyone with device access may read it. Avoid sensitive details on shared devices. No ads or analytics. Optional accounts use Supabase; only explicit encrypted backups upload notebooks. Uninstalling or clearing data can erase writing.", "लिखावट इस डिवाइस पर ऐप-स्तर एन्क्रिप्शन के बिना रहती है। डिवाइस तक पहुँच वाला व्यक्ति इसे पढ़ सकता है। साझा डिवाइस पर संवेदनशील बातें न लिखें। विज्ञापन या एनालिटिक्स नहीं। वैकल्पिक खाते Supabase उपयोग करते हैं; डायरी केवल स्पष्ट एन्क्रिप्टेड बैकअप से अपलोड होती है। ऐप हटाने या डेटा मिटाने से लिखावट मिट सकती है।")}</p></details>${button(t("Start · agree to local storage", "शुरू करें · स्थानीय स्टोरेज से सहमत"), "consent", "primary wide")}${account.intro()}`;
     case "home":
       return renderHome();
     case "journal": {
@@ -276,23 +313,64 @@ function content() {
       const index = journalDay(state, date());
       const question = dailyQuestions[index],
         ids = journalSelection(state, index, entry);
-      return `<div class="eyebrow">${t("Day", "दिन")} ${index + 1} / 7</div><h1>${prompts[index][hi() ? 1 : 0]}</h1><p class="muted">${t(question.single ? "Pick one. Tap it again to clear. Typing is optional." : "Pick all that fit. Tap again to clear. Typing is optional.", question.single ? "एक चुनें। हटाने के लिए फिर दबाएँ। लिखना वैकल्पिक है।" : "जो लागू हों, सब चुनें। हटाने के लिए फिर दबाएँ। लिखना वैकल्पिक है।")}</p>${choiceButtons(ids, question.options, featureContext(), "journal-choice", question.single)}<details class="optional-note" ${(state.draft ?? entry?.text) ? "open" : ""}><summary>${t("Add a note (optional)", "एक नोट जोड़ें (वैकल्पिक)")}</summary><label for="entry">${t("Anything to add? (optional)", "कुछ जोड़ना चाहेंगे? (वैकल्पिक)")}</label><textarea id="entry" maxlength="12000" placeholder="${t("Start wherever you are…", "जहाँ हैं, वहीं से शुरू करें…")}">${escape(state.draft ?? entry?.text ?? "")}</textarea></details><div id="status" class="status" role="status">${state.draft ? t("Draft saved on this device", "ड्राफ़्ट इस डिवाइस पर सेव है") : t("Local notebook. Cloud backup is a separate action.", "स्थानीय डायरी। क्लाउड बैकअप के लिए अलग कार्रवाई करनी होगी।")}</div><div class="row">${button(t("Save today’s entry", "आज का पन्ना सेव करें"), "save", "primary")}${button(t("Not right now", "अभी नहीं"), "home", "quiet")}</div><p class="notice">${t("Choices and notes stay on this device until you explicitly create an encrypted cloud backup from Account & backup. The Day 5 support rule awaits psychologist review. Your words are not monitored. Limited local safety-word matching can miss or misread signals. If you need urgent support, open Get help.", "खाता और बैकअप से एन्क्रिप्टेड क्लाउड बैकअप बनाने तक चुनाव और नोट इसी डिवाइस पर रहते हैं। दिन 5 के सहायता नियम की मनोवैज्ञानिक समीक्षा बाकी है। आपके शब्दों की निगरानी नहीं होती। सीमित स्थानीय सुरक्षा शब्द-मिलान संकेत चूक या गलत समझ सकता है। तुरंत सहायता चाहिए तो मदद खोलें।")}</p>${button(account.getUser() ? t("Account & cloud backup", "खाता और क्लाउड बैकअप") : t("Sign in for cloud backup", "क्लाउड बैकअप के लिए साइन इन"), account.getUser() ? "account" : "login", "quiet wide")}`;
+      return `<div class="eyebrow">${t("Day", "दिन")} ${index + 1} / 7</div><h1>${prompts[index][hi() ? 1 : 0]}</h1><p class="muted">${t(question.single ? "Pick one. Tap it again to clear. Typing is optional." : "Pick all that fit. Tap again to clear. Typing is optional.", question.single ? "एक चुनें। हटाने के लिए फिर दबाएँ। लिखना वैकल्पिक है।" : "जो लागू हों, सब चुनें। हटाने के लिए फिर दबाएँ। लिखना वैकल्पिक है।")}</p>${choiceButtons(ids, question.options, featureContext(), "journal-choice", question.single)}${journalExtraQuestions(index, entry, ids)}<details class="optional-note" ${(state.draft ?? entry?.text) ? "open" : ""}><summary>${t("Add a note (optional)", "एक नोट जोड़ें (वैकल्पिक)")}</summary><label for="entry">${t("Anything to add? (optional)", "कुछ जोड़ना चाहेंगे? (वैकल्पिक)")}</label><textarea id="entry" maxlength="12000" placeholder="${t("Start wherever you are…", "जहाँ हैं, वहीं से शुरू करें…")}">${escape(state.draft ?? entry?.text ?? "")}</textarea></details><div id="status" class="status" role="status">${state.draft ? t("Draft saved on this device", "ड्राफ़्ट इस डिवाइस पर सेव है") : t("Local notebook. Cloud backup is a separate action.", "स्थानीय डायरी। क्लाउड बैकअप के लिए अलग कार्रवाई करनी होगी।")}</div><div class="row">${button(t("Save today’s entry", "आज का पन्ना सेव करें"), "save", "primary")}${button(t("Not right now", "अभी नहीं"), "home", "quiet")}</div><p class="notice">${t("Choices and notes stay on this device until you explicitly create an encrypted cloud backup from Account & backup. The Day 5 support rule awaits psychologist review. Your words are not monitored. Limited local safety-word matching can miss or misread signals. If you need urgent support, open Get help.", "खाता और बैकअप से एन्क्रिप्टेड क्लाउड बैकअप बनाने तक चुनाव और नोट इसी डिवाइस पर रहते हैं। दिन 5 के सहायता नियम की मनोवैज्ञानिक समीक्षा बाकी है। आपके शब्दों की निगरानी नहीं होती। सीमित स्थानीय सुरक्षा शब्द-मिलान संकेत चूक या गलत समझ सकता है। तुरंत सहायता चाहिए तो मदद खोलें।")}</p>${button(account.getUser() ? t("Account & cloud backup", "खाता और क्लाउड बैकअप") : t("Sign in for cloud backup", "क्लाउड बैकअप के लिए साइन इन"), account.getUser() ? "account" : "login", "quiet wide")}`;
     }
     case "reflection":
       return state.entries.length < 7
         ? `<h1>${t("A little more time", "थोड़ा और समय")}</h1><p>${t("Your reflection opens after seven completed days.", "सात दिन पूरे होने पर चिंतन खुलेगा।")}</p>`
-        : `<div class="eyebrow">${t("Your week, in your words", "आपका सप्ताह, आपके शब्दों में")}</div><h1>${t("You made space<br>for yourself.", "आपने अपने लिए<br>जगह बनाई।")}</h1><p>${t("A private review with simple, tentative word-match themes—not AI analysis or a clinical assessment. Only you decide what fits.", "यह निजी समीक्षा और साधारण संभावित शब्द-मिलान विषय हैं—AI विश्लेषण या क्लिनिकल मूल्यांकन नहीं। क्या सही लगता है, आप तय करें।")}</p>${weeklyThemes(featureContext())}${state.entries.map((e, i) => `<details class="card"><summary>${t("Day", "दिन")} ${i + 1} · ${escape(e.date)}</summary><p style="white-space:pre-wrap">${escape(journalSummary(e, i, state.lang))}</p></details>`).join("")}<div class="card hero"><h2>${t("What do you notice?", "आप क्या देख पा रहे हैं?")}</h2><p>${t("Was there a feeling or situation that returned? Was there one moment of comfort? It is okay if nothing stands out.", "क्या कोई भावना या परिस्थिति बार-बार आई? क्या कोई सुकून का पल था? कुछ अलग न दिखे तो भी ठीक है।")}</p><h2>${t("An optional small step", "एक वैकल्पिक छोटा कदम")}</h2><p>${t("If it feels comfortable, name one kind, manageable action for tomorrow. You can skip this. These prompts have not yet had clinical review.", "सहज लगे तो कल के लिए एक छोटा, दयालु कदम सोचें। इसे छोड़ सकते हैं। इन प्रश्नों की अभी क्लिनिकल समीक्षा नहीं हुई है।")}</p></div><p>${t("If things feel persistently difficult, consider speaking with a qualified mental-health professional.", "अगर कठिनाई बनी हुई है, योग्य मानसिक स्वास्थ्य पेशेवर से बात करने पर विचार करें।")}</p>`;
+        : `<div class="eyebrow">${t("Your week, in your words", "आपका सप्ताह, आपके शब्दों में")}</div><h1>${t("You made space<br>for yourself.", "आपने अपने लिए<br>जगह बनाई।")}</h1><p>${t("A private review with simple, tentative word-match themes—not AI analysis or a clinical assessment. Only you decide what fits.", "यह निजी समीक्षा और साधारण संभावित शब्द-मिलान विषय हैं—AI विश्लेषण या क्लिनिकल मूल्यांकन नहीं। क्या सही लगता है, आप तय करें।")}</p>${journalWeekConclusion()}${weeklyThemes(featureContext())}${state.entries.map((e, i) => `<details class="card"><summary>${t("Day", "दिन")} ${i + 1} · ${escape(e.date)}</summary><p style="white-space:pre-wrap">${escape(journalSummary(e, i, state.lang))}</p></details>`).join("")}<div class="card hero"><h2>${t("What do you notice?", "आप क्या देख पा रहे हैं?")}</h2><p>${t("Was there a feeling or situation that returned? Was there one moment of comfort? It is okay if nothing stands out.", "क्या कोई भावना या परिस्थिति बार-बार आई? क्या कोई सुकून का पल था? कुछ अलग न दिखे तो भी ठीक है।")}</p><h2>${t("An optional small step", "एक वैकल्पिक छोटा कदम")}</h2><p>${t("If it feels comfortable, name one kind, manageable action for tomorrow. You can skip this. These prompts have not yet had clinical review.", "सहज लगे तो कल के लिए एक छोटा, दयालु कदम सोचें। इसे छोड़ सकते हैं। इन प्रश्नों की अभी क्लिनिकल समीक्षा नहीं हुई है।")}</p></div><p>${t("If things feel persistently difficult, consider speaking with a qualified mental-health professional.", "अगर कठिनाई बनी हुई है, योग्य मानसिक स्वास्थ्य पेशेवर से बात करने पर विचार करें।")}</p>`;
     case "panic":
       return `<div class="eyebrow">${t("One moment at a time", "एक बार में एक पल")}</div><h1>${t("One thing<br>at a time.", "एक बार में<br>एक चीज़।")}</h1><p class="notice">${t("Chest pain, severe breathing difficulty, or a possible medical emergency? Seek emergency medical care now. Do not assume it is panic.", "सीने में दर्द, साँस लेने में गंभीर परेशानी या संभावित चिकित्सा आपातस्थिति? तुरंत आपात चिकित्सा सहायता लें। इसे केवल घबराहट न मानें।")}</p>${tool ? exercise() : `<div class="card"><h2>${t("Choose what feels okay", "जो सहज लगे, चुनें")}</h2><div class="calm-options">${button(icon("panic") + `<span>${t("Slow breathing", "धीरे साँस")}</span>` + icon("arrow"), "breath")}${button(icon("sun") + `<span>${t("5–4–3–2–1 grounding", "5–4–3–2–1 ग्राउंडिंग")}</span>` + icon("arrow"), "ground")}${button(icon("journal") + `<span>${t("Count backwards", "उलटी गिनती")}</span>` + icon("arrow"), "count")}</div><p>${t("These optional exercises are not treatment. Stop if uncomfortable.", "ये वैकल्पिक अभ्यास उपचार नहीं हैं। असहज लगे तो रोक दें।")}</p></div>`}<div class="card"><h2>${t("You can reach out", "आप बात कर सकते हैं")}</h2>${contactLink()}${button(t("Crisis & emergency help", "संकट और आपात मदद"), "crisis", "help")}</div>`;
     case "crisis":
       return `<div class="eyebrow">${t("Support right now", "अभी सहायता")}</div><h1>${t("Your safety matters.", "आपकी सुरक्षा ज़रूरी है।")}</h1><p>${t("If you may hurt yourself, someone else, or cannot stay safe, contact local emergency services or go to the nearest emergency department. If possible, move near someone you trust and away from things you could use to harm yourself.", "अगर आप खुद को या किसी और को नुकसान पहुँचा सकते हैं, या सुरक्षित नहीं रह सकते, स्थानीय आपात सेवा से संपर्क करें या नज़दीकी आपात विभाग जाएँ। संभव हो तो किसी भरोसेमंद व्यक्ति के पास जाएँ और नुकसान पहुँचाने वाली चीज़ों से दूर रहें।")}</p><div class="card"><h2>${t("Ask someone to stay with you", "किसी को अपने साथ रहने को कहें")}</h2>${contactLink()}<p>${t("In India: 112 for emergency assistance; Tele-MANAS 14416 for mental-health support. Outside India, use your local emergency service. Calls require phone service and are never placed automatically.", "भारत में: आपात सहायता के लिए 112; मानसिक स्वास्थ्य सहायता के लिए टेली-मानस 14416। भारत के बाहर स्थानीय आपात सेवा का उपयोग करें। कॉल के लिए फ़ोन सेवा चाहिए; कॉल अपने आप नहीं लगती।")}</p><div class="resource-links"><a class="danger call-button" href="tel:112">${t("Call emergency · 112", "आपात कॉल · 112")}</a><a class="primary call-button" href="tel:14416">${t("Call Tele-MANAS · 14416", "टेली-मानस · 14416")}</a></div><small>${t("India · official web listings checked 7 Nov 2026, not call-tested. Availability may vary.", "भारत · आधिकारिक वेब सूची 7 नवम्बर 2026 को जाँची; कॉल-परीक्षण नहीं। उपलब्धता बदल सकती है।")}</small><p><a href="https://112.gov.in/about" target="_blank" rel="noopener noreferrer">112 · official source</a> · <a href="https://dghs.mohfw.gov.in/national-mental-health-programme.php" target="_blank" rel="noopener noreferrer">Tele-MANAS · official source</a></p></div><p class="notice">${t("Saath is not monitored, cannot contact responders, and cannot reliably detect crises. Local word matching can miss signals or get them wrong. Nobody has been notified. Do not wait for a reply from this app.", "साथ की निगरानी नहीं होती, यह सहायता सेवाओं से संपर्क या भरोसेमंद संकट पहचान नहीं कर सकता। स्थानीय शब्द-मिलान संकेत चूक या गलत समझ सकता है। किसी को सूचित नहीं किया गया है। इस ऐप के जवाब का इंतज़ार न करें।")}</p>${button(t("Back to calming tools", "शांत होने के अभ्यास"), "panic", "quiet")}`;
     case "settings":
-      return `<h1>${t("Make yourself<br>at home.", "अपनी जगह,<br>अपने तरीके से।")}</h1>${account.settingsCard()}${updates?.renderCard() || ""}<div class="card"><h2>${t("Faculty demo & worksheets", "फ़ैकल्टी डेमो और वर्कशीट")}</h2><p>${t("Explore 50 fictional profiles and 500 simulated daily records in a separate sandbox. Download CSV/JSON or a fillable PDF. Your notebook is not changed.", "अलग डेमो में 50 काल्पनिक प्रोफ़ाइल और 500 सिमुलेटेड रिकॉर्ड देखें। CSV/JSON या भरने योग्य PDF लें। आपकी डायरी नहीं बदलेगी।")}</p><a class="primary" href="./faculty/index.html">${t("Open simulated demo", "सिमुलेटेड डेमो खोलें")}</a><p><small>${t("Synthetic testing only — not real participants or clinical evidence.", "केवल कृत्रिम परीक्षण — वास्तविक प्रतिभागी या क्लिनिकल प्रमाण नहीं।")}</small></p></div><div class="card"><h2>${t("Trusted person", "भरोसेमंद व्यक्ति")}</h2><p>${t("Optional. Add a number without sharing your contacts. Tapping Call opens your dialler; you decide whether to call.", "वैकल्पिक। कॉन्टैक्ट साझा किए बिना नंबर जोड़ें। कॉल दबाने से डायलर खुलता है; कॉल करना आप तय करते हैं।")}</p><label for="phone">${t("Phone number", "फ़ोन नंबर")}</label><input id="phone" type="tel" maxlength="20" value="${escape(contactDraft ?? state.phone ?? "")}" autocomplete="off">${button(t("Save contact", "नंबर सेव करें"), "contact", "primary")} ${button(t("Cancel changes", "बदलाव रद्द करें"), "cancel-contact", "quiet")}<p id="status" role="status"></p></div><div class="card"><h2>${t("Privacy & prototype limits", "गोपनीयता और सीमाएँ")}</h2><p>${t("Writing is stored locally without app-level encryption. Accounts use Supabase Auth and this device stores a sign-in session. Optional cloud backups are encrypted with your separate passphrase before upload. No ads, analytics or remote AI. Android app backup is disabled.", "लिखावट स्थानीय है, ऐप-स्तर एन्क्रिप्शन के बिना। खाते Supabase Auth उपयोग करते हैं और डिवाइस साइन-इन सत्र रखता है। वैकल्पिक क्लाउड बैकअप अपलोड से पहले आपकी अलग पासफ़्रेज़ से एन्क्रिप्ट होते हैं। विज्ञापन, एनालिटिक्स या रिमोट AI नहीं। Android ऐप बैकअप बंद है।")}</p><p>${t("Not clinically reviewed. Local safety word matching is incomplete, and optional English screening is not a diagnosis. No automatic cloud sync, remote AI, or new journal cycles. Do not rely on this prototype for urgent support.", "क्लिनिकल समीक्षा नहीं हुई है। स्थानीय सुरक्षा शब्द-मिलान अधूरा है; वैकल्पिक अंग्रेज़ी स्क्रीनिंग निदान नहीं है। अपने आप क्लाउड सिंक, रिमोट AI या नए डायरी चक्र नहीं हैं। तुरंत सहायता के लिए इस प्रोटोटाइप पर निर्भर न रहें।")}</p>${button(account.getUser() ? t("Delete notebook & cloud backup", "डायरी और क्लाउड बैकअप मिटाएँ") : t("Delete all my data", "मेरा सारा डेटा मिटाएँ"), "delete", "danger")}</div><small>Saath ${escape(updates?.versionLabel() || "0.7.1")} · ${t("Internal testing prototype · 18+", "आंतरिक परीक्षण प्रोटोटाइप · 18+")}</small>`;
+      return `<h1>${t("Make yourself<br>at home.", "अपनी जगह,<br>अपने तरीके से।")}</h1>${account.settingsCard()}${updates?.renderCard() || ""}<div class="card"><h2>${t("Faculty demo & worksheets", "फ़ैकल्टी डेमो और वर्कशीट")}</h2><p>${t("Explore 50 fictional profiles and 500 simulated daily records in a separate sandbox. Download CSV/JSON or a fillable PDF. Your notebook is not changed.", "अलग डेमो में 50 काल्पनिक प्रोफ़ाइल और 500 सिमुलेटेड रिकॉर्ड देखें। CSV/JSON या भरने योग्य PDF लें। आपकी डायरी नहीं बदलेगी।")}</p><a class="primary" href="./faculty/index.html">${t("Open simulated demo", "सिमुलेटेड डेमो खोलें")}</a><p><small>${t("Synthetic testing only — not real participants or clinical evidence.", "केवल कृत्रिम परीक्षण — वास्तविक प्रतिभागी या क्लिनिकल प्रमाण नहीं।")}</small></p></div>${trustedContactCard()}<div class="card"><h2>${t("Privacy & prototype limits", "गोपनीयता और सीमाएँ")}</h2><p>${t("Writing is stored locally without app-level encryption. Accounts use Supabase Auth and this device stores a sign-in session. Optional cloud backups are encrypted with your separate passphrase before upload. No ads, analytics or remote AI. Android app backup is disabled.", "लिखावट स्थानीय है, ऐप-स्तर एन्क्रिप्शन के बिना। खाते Supabase Auth उपयोग करते हैं और डिवाइस साइन-इन सत्र रखता है। वैकल्पिक क्लाउड बैकअप अपलोड से पहले आपकी अलग पासफ़्रेज़ से एन्क्रिप्ट होते हैं। विज्ञापन, एनालिटिक्स या रिमोट AI नहीं। Android ऐप बैकअप बंद है।")}</p><p>${t("Not clinically reviewed. Local safety word matching is incomplete, and optional English screening is not a diagnosis. No automatic cloud sync, remote AI, or new journal cycles. Do not rely on this prototype for urgent support.", "क्लिनिकल समीक्षा नहीं हुई है। स्थानीय सुरक्षा शब्द-मिलान अधूरा है; वैकल्पिक अंग्रेज़ी स्क्रीनिंग निदान नहीं है। अपने आप क्लाउड सिंक, रिमोट AI या नए डायरी चक्र नहीं हैं। तुरंत सहायता के लिए इस प्रोटोटाइप पर निर्भर न रहें।")}</p>${button(account.getUser() ? t("Delete notebook & cloud backup", "डायरी और क्लाउड बैकअप मिटाएँ") : t("Delete all my data", "मेरा सारा डेटा मिटाएँ"), "delete", "danger")}</div><small>Saath ${escape(updates?.versionLabel() || "0.7.1")} · ${t("Internal testing prototype · 15+", "आंतरिक परीक्षण प्रोटोटाइप · 15+")}</small>`;
   }
 }
+function normalizedContact(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw || !/^\+?[\d ()-]+$/.test(raw)) return null;
+  const normalized = raw.replace(/[ ()-]/g, "");
+  return /^\+?\d{7,15}$/.test(normalized) ? normalized : null;
+}
+function contactDirty() {
+  return (
+    contactDraft !== undefined &&
+    contactDraft.trim() !== String(state.phone ?? "").trim()
+  );
+}
+function updateContactDraftUI() {
+  const dirty = contactDirty(),
+    saved = normalizedContact(state.phone);
+  const badge = root.querySelector(".contact-badge");
+  const label = dirty
+    ? t("Unsaved changes", "बदलाव सेव नहीं हैं")
+    : saved
+      ? t("Saved", "सेव है")
+      : t("Optional", "वैकल्पिक");
+  if (badge && badge.textContent !== label) badge.textContent = label;
+  root
+    .querySelector(".trusted-contact")
+    ?.classList.toggle("has-unsaved-changes", dirty);
+  const status = root.querySelector("#status");
+  const note = dirty
+    ? t(
+        "Changes are not saved yet. Tap Save, or cancel to keep the saved number.",
+        "बदलाव अभी सेव नहीं हैं। सेव करें, या पुराना नंबर रखने के लिए रद्द करें।",
+      )
+    : "";
+  if (status && status.textContent !== note) status.textContent = note;
+  if (normalizedContact(contactDraft))
+    root.querySelector("#phone")?.removeAttribute("aria-invalid");
+}
+function trustedContactCard() {
+  const saved = normalizedContact(state.phone);
+  return `<section class="card trusted-contact" aria-labelledby="contact-heading"><div class="section-title"><h2 id="contact-heading">${t("Your trusted person", "आपका भरोसेमंद व्यक्ति")}</h2><span class="contact-badge">${saved ? t("Saved", "सेव है") : t("Optional", "वैकल्पिक")}</span></div><p>${t("Keep someone you can reach out to close by. No access to your address book, and no automatic calls or messages.", "किसी भरोसेमंद व्यक्ति का नंबर पास रखें। कॉन्टैक्ट सूची तक पहुँच नहीं, कोई अपने आप कॉल या संदेश नहीं।")}</p>${saved ? `<div class="saved-contact"><span><small>${t("Saved on this device", "इस डिवाइस पर सेव है")}</small><strong dir="ltr">${escape(saved)}</strong></span><a class="quiet contact-call" href="tel:${escape(saved)}">${icon("phone")}${t("Call", "कॉल")}</a></div>` : ""}<label for="phone">${t("Phone number", "फ़ोन नंबर")}</label><input id="phone" type="tel" inputmode="tel" maxlength="32" dir="ltr" aria-describedby="contact-hint status" value="${escape(contactDraft ?? state.phone ?? "")}" autocomplete="off" placeholder="+91 …"><small id="contact-hint">${t("Use 7–15 digits; add the country code for international numbers. Saving does not verify that the number is reachable.", "7–15 अंक लिखें; अंतरराष्ट्रीय नंबर में देश कोड जोड़ें। सेव करना नंबर उपलब्ध होने की पुष्टि नहीं है।")}</small><div class="row contact-actions">${button(saved ? t("Save changes", "बदलाव सेव करें") : t("Save number", "नंबर सेव करें"), "contact", "primary")}${button(t("Cancel changes", "बदलाव रद्द करें"), "cancel-contact", "quiet")}</div>${saved ? button(t("Remove saved number", "सेव नंबर हटाएँ"), "remove-contact", "text-button") : ""}<p id="status" role="status" aria-live="polite"></p><small>${t("Local to this notebook. Included only when you explicitly make an encrypted cloud backup; never sent to the update service.", "इस डायरी में स्थानीय। केवल आपके एन्क्रिप्टेड क्लाउड बैकअप बनाने पर शामिल; अपडेट सेवा को कभी नहीं भेजा जाता।")}</small></section>`;
+}
 function contactLink() {
-  return state.phone
-    ? `<a href="tel:${escape(state.phone)}">${t("Call your trusted person", "भरोसेमंद व्यक्ति को कॉल करें")}</a><br>`
+  const number = normalizedContact(state.phone);
+  return number
+    ? `<a href="tel:${escape(number)}">${t("Call your trusted person", "भरोसेमंद व्यक्ति को कॉल करें")}</a><br>`
     : `<p>${t("No trusted contact saved. You can call someone you trust from your phone, or add their number in Settings.", "भरोसेमंद नंबर सेव नहीं है। फ़ोन से किसी भरोसेमंद व्यक्ति को कॉल करें या सेटिंग्स में नंबर जोड़ें।")}</p>`;
 }
 function exercise() {
@@ -364,6 +442,31 @@ function act(a) {
     render();
     window.scrollTo(0, 0);
   }
+  if (a.startsWith("journal-followup:")) {
+    if (page !== "journal") return;
+    const [, key, id] = a.split(":"),
+      question = journalFollowUps.find((q) => q.id === key);
+    if (!question?.options.some((o) => o.id === id)) return;
+    const index = journalDay(state, date()),
+      entry = today(),
+      previous = JSON.stringify(state);
+    const followUps = JSON.parse(
+      JSON.stringify(journalFollowUpSelection(index, entry)),
+    );
+    followUps[key] = toggleOption(followUps[key] || [], id, question.options);
+    state.draft = root.querySelector("#entry").value;
+    state.journalChoices = {
+      day: index + 1,
+      optionIds: [...journalSelection(state, index, entry)],
+      followUps,
+    };
+    if (!persist()) {
+      state = JSON.parse(previous);
+      alert(t("Could not save your choice.", "चुनाव सेव नहीं हुआ।"));
+    }
+    render();
+    return;
+  }
   if (a.startsWith("journal-choice:")) {
     if (page !== "journal") return;
     const index = journalDay(state, date()),
@@ -378,7 +481,13 @@ function act(a) {
       question.single,
     );
     state.draft = root.querySelector("#entry").value;
-    state.journalChoices = { day: index + 1, optionIds: ids };
+    state.journalChoices = {
+      day: index + 1,
+      optionIds: ids,
+      followUps: JSON.parse(
+        JSON.stringify(journalFollowUpSelection(index, today())),
+      ),
+    };
     const safety = index === 4 && ids.includes("disappear");
     const ok = persist();
     if (!ok) state = JSON.parse(previous);
@@ -402,7 +511,13 @@ function act(a) {
     const value = root.querySelector("textarea").value.trim();
     const index = journalDay(state, date()),
       ids = journalSelection(state, index, today());
-    if (!value && !ids.length)
+    if (
+      !value &&
+      !ids.length &&
+      !Object.values(journalFollowUpSelection(index, today())).some(
+        (ids) => ids.length,
+      )
+    )
       return (root.querySelector("#status").textContent = t(
         "Pick an option or add a few words first, or return later.",
         "पहले कोई विकल्प चुनें या कुछ शब्द जोड़ें, या बाद में आएँ।",
@@ -415,6 +530,9 @@ function act(a) {
       day: index + 1,
       optionIds: [...ids],
       questionVersion: 1,
+      followUps: JSON.parse(
+        JSON.stringify(journalFollowUpSelection(index, today())),
+      ),
     };
     if (e) Object.assign(e, saved);
     else if (state.entries.length < 7) state.entries.push(saved);
@@ -447,27 +565,52 @@ function act(a) {
     const n = root.querySelector("#number");
     n.textContent = Number(n.textContent) > 0 ? Number(n.textContent) - 1 : 20;
   }
-  if (a === "contact") {
-    const number = root.querySelector("#phone").value.trim();
-    if (number && !/^\+?[\d ()-]{5,20}$/.test(number))
-      return (root.querySelector("#status").textContent = t(
-        "Enter a valid phone number.",
-        "सही फ़ोन नंबर लिखें।",
-      ));
+  if (a === "contact" || a === "remove-contact") {
+    const removing = a === "remove-contact";
+    if (
+      removing &&
+      !window.confirm(
+        t(
+          "Remove this saved number? You can add it again later.",
+          "सेव नंबर हटाएँ? इसे बाद में फिर जोड़ सकते हैं।",
+        ),
+      )
+    )
+      return;
+    const field = root.querySelector("#phone");
+    const number = removing ? "" : normalizedContact(field.value);
+    if (number === null) {
+      field.setAttribute("aria-invalid", "true");
+      root.querySelector("#status").textContent = t(
+        "Enter a valid phone number with 7–15 digits. Use Remove saved number to delete it.",
+        "7–15 अंकों का सही फ़ोन नंबर लिखें। मिटाने के लिए सेव नंबर हटाएँ चुनें।",
+      );
+      field.focus();
+      return;
+    }
     const previous = state.phone;
-    state.phone = number.replace(/[^+\d]/g, "");
+    state.phone = number;
     if (!persist()) {
-      state.phone = previous;
-      return (root.querySelector("#status").textContent = t(
-        "Could not save.",
-        "सेव नहीं हुआ।",
-      ));
+      if (previous === undefined) delete state.phone;
+      else state.phone = previous;
+      root.querySelector("#status").textContent = t(
+        "Could not save. The previous number is unchanged. Please retry when device storage is available.",
+        "सेव नहीं हुआ। पिछला नंबर नहीं बदला। डिवाइस में जगह होने पर फिर कोशिश करें।",
+      );
+      return;
     }
     contactDraft = undefined;
-    root.querySelector("#status").textContent = t(
-      "Saved on this device.",
-      "इस डिवाइस पर सेव है।",
-    );
+    render();
+    root.querySelector("#status").textContent = removing
+      ? t(
+          "Saved number removed from this notebook. Existing cloud backups change only after you back up again.",
+          "सेव नंबर इस डायरी से हटा। पुराना क्लाउड बैकअप दोबारा बैकअप बनाने पर ही बदलेगा।",
+        )
+      : t(
+          "Saved on this device. Your trusted person is available from Calm and Get help.",
+          "इस डिवाइस पर सेव है। भरोसेमंद व्यक्ति सुकून और मदद में उपलब्ध है।",
+        );
+    return;
   }
   if (
     a === "delete" &&

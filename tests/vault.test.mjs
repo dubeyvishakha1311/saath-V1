@@ -153,3 +153,65 @@ test("one encrypted notebook preserves journal and creative choice records/draft
   ])
     assert.throws(() => notebookSnapshot({ ...data, ...patch }));
 });
+
+test("new journal follow-ups and drafts survive encrypted backup; unknown IDs and malformed choices fail closed", async () => {
+  const data = {
+    ...notebook,
+    entries: [
+      {
+        date: "2026-11-07",
+        day: 1,
+        questionVersion: 1,
+        optionIds: ["okay"],
+        text: "",
+        followUps: {
+          thought: ["compare"],
+          perspective: ["facts", "friend"],
+          step: ["care"],
+        },
+      },
+    ],
+    journalChoices: {
+      day: 1,
+      optionIds: ["okay"],
+      followUps: { step: ["pause"] },
+    },
+  };
+  const row = await encryptNotebook(
+    data,
+    "separate backup passphrase",
+    "account-a",
+    webcrypto,
+  );
+  assert.deepEqual(
+    await decryptNotebook(
+      row,
+      "separate backup passphrase",
+      "account-a",
+      webcrypto,
+    ),
+    data,
+  );
+  for (const followUps of [
+    null,
+    [],
+    { bad: [] },
+    { step: ["not-real"] },
+    { step: ["pause", "skip"] },
+    { thought: ["compare", "compare"] },
+    { step: "pause" },
+  ]) {
+    assert.throws(() =>
+      notebookSnapshot({
+        ...data,
+        entries: [{ ...data.entries[0], followUps }],
+      }),
+    );
+    assert.throws(() =>
+      notebookSnapshot({
+        ...data,
+        journalChoices: { ...data.journalChoices, followUps },
+      }),
+    );
+  }
+});

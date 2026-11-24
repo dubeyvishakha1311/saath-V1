@@ -22,6 +22,7 @@ export function createAccountController(c) {
   const notify = (text, error = false) => {
     message = text;
     problem = error;
+    if (["panic", "crisis"].includes(c.getPage())) return;
     const el =
       c.root.querySelector("#account-status") ||
       c.root.querySelector("#global-status");
@@ -40,6 +41,11 @@ export function createAccountController(c) {
     return `<p id="account-status" role="status" aria-live="polite" class="status ${problem ? "error" : ""}">${c.escape(message)}</p>`;
   }
   function authError(error) {
+    if (error?.code === "google_settings_unavailable")
+      return tr(
+        "Could not check Google sign-in right now. Check your connection and try again. This does not mean your account is disabled; guest mode and Calm are still available.",
+        "अभी Google साइन-इन की उपलब्धता नहीं जाँच सके। कनेक्शन जाँचकर फिर कोशिश करें। इसका अर्थ खाता बंद होना नहीं है; अतिथि मोड और सुकून उपलब्ध हैं।",
+      );
     if (error?.code === "google_provider_disabled")
       return tr(
         "Google sign-in is not enabled for Saath yet. The project owner must configure Google OAuth in Supabase. Email sign-in and guest mode are still available.",
@@ -65,24 +71,36 @@ export function createAccountController(c) {
       "अनुरोध पूरा नहीं हुआ। जानकारी और कनेक्शन जाँचकर फिर कोशिश करें।",
     );
   }
+  function syncBusyUI() {
+    c.root
+      .querySelectorAll(
+        '#account-form button, [data-action="google-signin"], #google-consent',
+      )
+      .forEach((el) => (el.disabled = busy));
+    for (const el of c.root.querySelectorAll(
+      '#account-form, .google-option, [data-action="google-signin"]',
+    )) {
+      if (busy) el.setAttribute("aria-busy", "true");
+      else el.removeAttribute("aria-busy");
+    }
+    const label = c.root.querySelector("[data-google-label]");
+    if (label)
+      label.textContent = busy
+        ? tr("Please wait…", "कृपया प्रतीक्षा करें…")
+        : tr("Continue with Google", "Google से जारी रखें");
+  }
   async function run(task) {
     if (busy) return;
     busy = true;
-    notify("");
-    c.root
-      .querySelectorAll('#account-form button, [data-action="google-signin"]')
-      .forEach((el) => (el.disabled = true));
-    c.root.querySelector("#account-form")?.setAttribute("aria-busy", "true");
+    notify(tr("Working…", "काम चल रहा है…"));
+    syncBusyUI();
     try {
       await task();
     } catch (error) {
       notify(authError(error), true);
     } finally {
       busy = false;
-      c.root
-        .querySelectorAll('#account-form button, [data-action="google-signin"]')
-        .forEach((el) => (el.disabled = false));
-      c.root.querySelector("#account-form")?.removeAttribute("aria-busy");
+      syncBusyUI();
       c.root
         .querySelectorAll("#auth-password, #vault-password")
         .forEach((el) => (el.value = ""));
@@ -149,13 +167,13 @@ export function createAccountController(c) {
   }
   function intro() {
     if (user) return settingsCard();
-    return `<div class="account-entry"><span class="eyebrow">${tr("AN ACCOUNT IS OPTIONAL", "खाता वैकल्पिक है")}</span><h2>${tr("Your notebook can stay with you.", "आपकी डायरी आपके साथ रह सकती है।")}</h2><p>${tr("Sign in for an optional encrypted cloud backup, or keep writing only on this device.", "वैकल्पिक एन्क्रिप्टेड क्लाउड बैकअप के लिए साइन इन करें, या केवल इस डिवाइस पर लिखें।")}</p><div class="row">${c.button(tr("Sign in", "साइन इन"), "login", "quiet")}${c.button(tr("Create account", "खाता बनाएँ"), "signup", "quiet")}</div></div>`;
+    return `<div class="account-entry"><span class="eyebrow">${tr("AN ACCOUNT IS OPTIONAL", "खाता वैकल्पिक है")}</span><h2>${tr("Your notebook can stay with you.", "आपकी डायरी आपके साथ रह सकती है।")}</h2><p>${tr("Optional accounts and cloud backup remain adult-only pending youth privacy review. You can use local reflection without an account.", "किशोर गोपनीयता समीक्षा तक वैकल्पिक खाते और क्लाउड बैकअप केवल वयस्कों के लिए हैं। बिना खाते स्थानीय चिंतन कर सकते हैं।")}</p><div class="row">${c.button(tr("Sign in", "साइन इन"), "login", "quiet")}${c.button(tr("Create account", "खाता बनाएँ"), "signup", "quiet")}</div></div>`;
   }
   function settingsCard() {
     return `<div class="card account-summary"><div class="eyebrow">${tr("ACCOUNT", "खाता")}</div><h2>${user ? tr("Signed in", "साइन इन है") : tr("On this device only", "केवल इस डिवाइस पर")}</h2><p>${user ? c.escape(user.email || "") : tr("No account needed for local journaling or Calm.", "स्थानीय डायरी या सुकून के लिए खाता ज़रूरी नहीं।")}</p>${c.button(user ? tr("Account & backup", "खाता और बैकअप") : tr("Sign in / create account", "साइन इन / खाता बनाएँ"), user ? "account" : "login", "quiet wide")}</div>`;
   }
   function googleOption() {
-    return `<div class="google-option">${status()}<label class="check-row"><input id="google-consent" type="checkbox"><span>${tr("I am 18+ and choose to share my Google email and basic profile with Supabase for sign-in. This device stores my session; my notebook is not uploaded.", "मैं 18+ हूँ और साइन-इन के लिए अपना Google ईमेल और बुनियादी प्रोफ़ाइल Supabase से साझा करना चुनता/चुनती हूँ। यह डिवाइस सत्र रखता है; डायरी अपलोड नहीं होती।")}</span></label>${c.button(tr("Continue with Google", "Google से जारी रखें"), "google-signin", "quiet wide google-button")}<p class="auth-divider">${tr("or use email", "या ईमेल उपयोग करें")}</p></div>`;
+    return `<div class="google-option">${status()}<label class="check-row"><input id="google-consent" type="checkbox"><span>${tr("I am 18+ and choose to share my Google email and basic profile with Supabase for sign-in. This device stores my session; my notebook is not uploaded.", "मैं 18+ हूँ और साइन-इन के लिए अपना Google ईमेल और बुनियादी प्रोफ़ाइल Supabase से साझा करना चुनता/चुनती हूँ। यह डिवाइस सत्र रखता है; डायरी अपलोड नहीं होती।")}</span></label>${c.button(`<span class="google-state-mark" aria-hidden="true">G</span><span data-google-label>${tr("Continue with Google", "Google से जारी रखें")}</span>`, "google-signin", "quiet wide google-button")}<p class="auth-divider">${tr("or use email", "या ईमेल उपयोग करें")}</p></div>`;
   }
   function renderPage(page) {
     if (!accountPages.includes(page)) return null;
@@ -179,6 +197,7 @@ export function createAccountController(c) {
     return `<h1>${tr("A backup, only if you want one.", "बैकअप, अगर आप चाहें।")}</h1><p>${tr("One encrypted backup per account. Upload replaces the previous cloud copy; restore replaces this account’s local notebook. There is no automatic upload or merge.", "हर खाते का एक एन्क्रिप्टेड बैकअप। अपलोड पिछली क्लाउड कॉपी बदलता है; रिस्टोर इस खाते की स्थानीय डायरी बदलता है। अपने आप अपलोड या मर्ज नहीं होता।")}</p><div class="notice">${tr("Use a separate backup passphrase. It is never saved or sent to Supabase. If you forget it, neither a password reset nor support can unlock your backup. Account email, backup timestamps and encrypted size are visible to the service; notebook content is encrypted before upload. Local storage remains unencrypted.", "अलग बैकअप पासफ़्रेज़ रखें। इसे सेव या Supabase को नहीं भेजा जाता। भूलने पर पासवर्ड रीसेट या सहायता बैकअप नहीं खोल सकती। सेवा को खाता ईमेल, बैकअप समय और एन्क्रिप्टेड आकार दिखता है; डायरी अपलोड से पहले एन्क्रिप्ट होती है। स्थानीय स्टोरेज बिना एन्क्रिप्शन के है।")}</div><form id="account-form" data-cloud-form><label for="vault-password">${tr("Backup passphrase (12+ characters)", "बैकअप पासफ़्रेज़ (12+ अक्षर)")}</label><input id="vault-password" type="password" minlength="12" maxlength="1024" autocomplete="off" required><label class="check-row"><input id="cloud-consent" type="checkbox" required><span>${tr("I choose to transfer this account’s notebook, including journal entries, drafts, mood, reflections, contact and screening answers, as encrypted data. I understand the replacement and passphrase limits above.", "मैं इस खाते की डायरी—पन्ने, ड्राफ़्ट, मन की बात, चिंतन, संपर्क और स्क्रीनिंग उत्तर—एन्क्रिप्टेड डेटा के रूप में ट्रांसफ़र करना चुनता हूँ। ऊपर दिए बदलाव और पासफ़्रेज़ की सीमाएँ समझता हूँ।")}</span></label><div class="row"><button type="submit" value="upload" class="primary">${tr("Encrypt & upload", "एन्क्रिप्ट और अपलोड")}</button><button type="submit" value="restore" class="quiet">${tr("Unlock & restore", "खोलें और रिस्टोर करें")}</button></div>${status()}${b(tr("Delete cloud backup only", "केवल क्लाउड बैकअप मिटाएँ"), "delete-cloud", "text-button")}</form><p class="notice">${tr("Not an audited encryption product. Keep important records elsewhere. For a shared device, sign out; app-level local encryption and secure native token storage remain production work.", "यह ऑडिट किया हुआ एन्क्रिप्शन उत्पाद नहीं है। ज़रूरी रिकॉर्ड कहीं और रखें। साझा डिवाइस पर साइन आउट करें; ऐप-स्तर स्थानीय एन्क्रिप्शन और सुरक्षित नेटिव टोकन स्टोरेज का काम बाकी है।")}</p>`;
   }
   function bind() {
+    syncBusyUI();
     c.root
       .querySelector("[data-auth-form]")
       ?.addEventListener("submit", (event) => {
@@ -370,6 +389,12 @@ export function createAccountController(c) {
         return true;
       }
       run(async () => {
+        notify(
+          tr(
+            "Checking Google availability and opening secure sign-in…",
+            "Google की उपलब्धता जाँच रहे हैं और सुरक्षित साइन-इन खोल रहे हैं…",
+          ),
+        );
         await c.startGoogleSignIn();
         notify(
           tr(

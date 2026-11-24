@@ -1361,3 +1361,206 @@ html[lang="hi"] .screen-title {
 .optional-note[open] label {
   margin-top: 18px;
 }
+
+/* Quiet interaction polish: short, interruptible motion and tactile controls.
+   Principles-inspired implementation, not an imported designer skill or endorsement. */
+:root {
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --shadow-control: 0 1px 2px #29332e0c, 0 2px 5px #29332e06;
+}
+button,
+a.primary,
+.contact-call {
+  -webkit-user-select: none;
+  user-select: none;
+}
+input,
+textarea,
+select {
+  scroll-margin-block: 120px;
+}
+input[aria-invalid="true"] {
+  border-color: #a33727;
+  box-shadow: 0 0 0 2px #a3372714;
+}
+.primary {
+  box-shadow:
+    inset 0 1px 0 #ffffff21,
+    0 1px 2px #52291724;
+}
+.card {
+  box-shadow: 0 1px 2px #29332e04;
+}
+.tap-option {
+  box-shadow: var(--shadow-control);
+}
+.tap-option.selected {
+  border-color: var(--forest);
+  box-shadow: inset 0 0 0 1px var(--forest);
+}
+.choice-mark {
+  border-radius: 6px;
+}
+.tap-option.selected .choice-mark {
+  background: var(--forest);
+  color: var(--surface);
+  font-size: 15px;
+}
+.choice-conclusion {
+  border-color: #cbd7c8;
+  background: #f0f4ec;
+}
+.choice-conclusion h2 {
+  font-size: 1.12rem;
+  margin-top: 0;
+}
+.choice-conclusion li {
+  margin-block: 9px;
+  line-height: 1.65;
+}
+.contact-badge {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  padding: 4px 9px;
+  border: 1px solid #cdd8c8;
+  border-radius: 20px;
+  background: var(--sage);
+  color: var(--forest);
+  white-space: nowrap;
+}
+.saved-contact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 0 22px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+}
+.saved-contact span {
+  min-width: 0;
+}
+.saved-contact small,
+.saved-contact strong {
+  display: block;
+}
+.saved-contact strong {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+}
+.contact-call {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 9px;
+  padding: 10px 12px;
+  min-height: 44px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.contact-call svg {
+  width: 16px;
+  height: 16px;
+}
+.contact-actions {
+  margin-top: 18px;
+}
+.trusted-contact #status:not(:empty) {
+  border-left: 2px solid var(--forest);
+  padding: 9px 12px;
+  background: var(--sage);
+  border-radius: 0 6px 6px 0;
+}
+.trusted-contact small {
+  line-height: 1.6;
+}
+@media (hover: hover) and (pointer: fine) {
+  button:not(:disabled):hover,
+  .contact-call:hover {
+    filter: brightness(0.97);
+  }
+  .tap-option:not(.selected):hover {
+    border-color: #9cae9b;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  button,
+  a.primary,
+  .contact-call {
+    transition:
+      transform 140ms var(--ease-out-soft),
+      background-color 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+  button:not(:disabled):active,
+  .contact-call:active {
+    transform: scale(0.98);
+    opacity: 1;
+  }
+  nav button:not(:disabled):active {
+    transform: scale(0.96);
+  }
+  .route-enter {
+    animation: screen-arrive 180ms var(--ease-out-soft) both;
+  }
+  @keyframes screen-arrive {
+    from {
+      opacity: 0.6;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+/* No new page animation for crisis/Calm; the global reduce rule above remains
+   authoritative because all new movement is gated by no-preference. */
+
+/* Sign-in feedback retains its button footprint; no decorative page movement. */
+.google-button {
+  justify-content: center;
+  gap: 10px;
+  min-height: 50px;
+}
+.google-state-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font-size: 11px;
+}
+.google-button[aria-busy="true"] {
+  opacity: 0.8;
+  cursor: progress;
+}
+.google-button[aria-busy="true"] .google-state-mark {
+  font-size: 0;
+  border-color: #b4c1b2;
+  border-top-color: var(--forest);
+}
+.trusted-contact.has-unsaved-changes .contact-badge {
+  background: #fff1dd;
+  color: #754a13;
+  border-color: #e0c9a4;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .google-button[aria-busy="true"] .google-state-mark {
+    animation: sign-in-wait 800ms linear infinite;
+  }
+  @keyframes sign-in-wait {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}

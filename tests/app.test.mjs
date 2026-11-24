@@ -25,11 +25,11 @@ const source = readFileSync(new URL("../src/main.js", import.meta.url), "utf8")
   )
   .replace(
     /import\s*\{[^}]*\}\s*from\s*['"]\.\/supabase\.js['"];?/,
-    'const supabase=window.__supabase;const authRedirectURL=()=>"https://saath.test/?auth=callback";const listenForNativeAuth=async()=>{};const authCallbackFailed=()=>false;const startGoogleSignIn=async()=>{window.__googleCalls=(window.__googleCalls||0)+1;if(window.__googleError)throw window.__googleError;};',
+    'const supabase=window.__supabase;const authRedirectURL=()=>"https://saath.test/?auth=callback";const listenForNativeAuth=async()=>{};const authCallbackFailed=()=>false;const startGoogleSignIn=async()=>{window.__googleCalls=(window.__googleCalls||0)+1;if(window.__googleWait)await window.__googleWait;if(window.__googleError)throw window.__googleError;};',
   )
   .replace(
     /import\s*\{[^}]*\}\s*from\s*['"]\.\/journal\.js['"];?/,
-    "const {dailyQuestions,journalDay,journalSelection,hasJournalSafetyChoice,journalSummary,choiceButtons,toggleOption}=window.__journal;",
+    "const {dailyQuestions,journalFollowUps,renderConclusion,journalDay,journalSelection,hasJournalSafetyChoice,journalSummary,choiceButtons,toggleOption}=window.__journal;",
   );
 
 function app(saved, client = null) {
@@ -87,7 +87,7 @@ test("onboarding, draft recovery, save, same-day edit and deletion", () => {
   a.click("settings");
   a.click("delete");
   assert.equal(a.data(), null);
-  assert.match(a.doc.body.textContent, /Before we begin/);
+  assert.match(a.doc.body.textContent, /Privacy on this device/);
   a.close();
 });
 test("panic tools and crisis guidance work before consent", () => {
@@ -172,7 +172,7 @@ test("pre-consent back button returns to onboarding, not journal dashboard", () 
   const a = app();
   a.click("crisis");
   a.click("back");
-  assert.match(a.doc.body.textContent, /Before we begin/);
+  assert.match(a.doc.body.textContent, /Privacy on this device/);
   assert.equal(a.doc.querySelector("nav"), null);
   a.close();
 });
@@ -227,13 +227,13 @@ test("Home before consent stays on welcome, and deletion clears history", () => 
   const a = app();
   a.click("crisis");
   a.click("home-root");
-  assert.match(a.doc.body.textContent, /Before we begin/);
+  assert.match(a.doc.body.textContent, /Privacy on this device/);
   assert.equal(a.data(), null);
   a.click("consent");
   a.click("settings");
   a.click("delete");
   a.w.dispatchEvent(new a.w.Event("saath:back"));
-  assert.match(a.doc.body.textContent, /Before we begin/);
+  assert.match(a.doc.body.textContent, /Privacy on this device/);
   assert.equal(a.doc.querySelector('[data-action="back"]').disabled, true);
   a.close();
 });
@@ -421,7 +421,7 @@ test("screening discard and delete-all remove all new sensitive fields", () => {
   a.click("delete");
   assert.equal(a.data(), null);
   a.w.dispatchEvent(new a.w.Event("saath:back"));
-  assert.match(a.doc.body.textContent, /Before we begin/);
+  assert.match(a.doc.body.textContent, /Privacy on this device/);
   a.close();
 });
 test("new flows preserve basic controls, Hindi UI and pre-consent guards", () => {
@@ -871,7 +871,10 @@ test("all seven journal days save without typing: Day 1 single, Days 2–7 multi
     });
     a.click("journal");
     const options = journal.dailyQuestions[day - 1].options;
-    assert.equal(a.doc.querySelectorAll(".tap-option").length, options.length);
+    assert.equal(
+      a.doc.querySelectorAll('[data-action^="journal-choice:"]').length,
+      options.length,
+    );
     a.click(`journal-choice:${options[0].id}`);
     a.click(`journal-choice:${options[1].id}`);
     assert.equal(
@@ -1100,14 +1103,439 @@ test("My space exposes update status in the preview without offering an unsuppor
   a.close();
 });
 
-test('My space links the isolated faculty sandbox without replacing personal entries', () => {
-  const saved = {consent:true,lang:'en',entries:[{date:'2026-10-01',text:'Personal draft remains private'}]};
-  const a=app(saved);
-  a.click('settings');
-  assert.match(a.doc.querySelector('a[href="./faculty/index.html"]').textContent,/simulated demo/);
-  assert.deepEqual(a.data().entries,saved.entries);
-  a.click('language');
-  assert.match(a.doc.querySelector('a[href="./faculty/index.html"]').textContent,/सिमुलेटेड/);
-  assert.deepEqual(a.data().entries,saved.entries);
+test("My space links the isolated faculty sandbox without replacing personal entries", () => {
+  const saved = {
+    consent: true,
+    lang: "en",
+    entries: [{ date: "2026-10-01", text: "Personal draft remains private" }],
+  };
+  const a = app(saved);
+  a.click("settings");
+  assert.match(
+    a.doc.querySelector('a[href="./faculty/index.html"]').textContent,
+    /simulated demo/,
+  );
+  assert.deepEqual(a.data().entries, saved.entries);
+  a.click("language");
+  assert.match(
+    a.doc.querySelector('a[href="./faculty/index.html"]').textContent,
+    /सिमुलेटेड/,
+  );
+  assert.deepEqual(a.data().entries, saved.entries);
+  a.close();
+});
+
+test("welcome replaces Before we begin with bilingual 15+ wellness wording and retains storage disclosure", () => {
+  const a = app();
+  assert.doesNotMatch(a.doc.body.textContent, /Before we begin|I’m 18\+/);
+  assert.match(a.doc.body.textContent, /15\+/);
+  assert.match(
+    a.doc.body.textContent,
+    /The first step toward wellness for students and adults as well/,
+  );
+  assert.match(a.doc.body.textContent, /does not provide therapy or diagnosis/);
+  assert.match(
+    a.doc.querySelector("details").textContent,
+    /without app-level encryption/,
+  );
+  assert.match(a.doc.body.textContent, /not clinical approval for teenagers/);
+  a.click("language");
+  assert.match(a.doc.body.textContent, /15\+/);
+  assert.doesNotMatch(a.doc.body.textContent, /शुरू करने से पहले/);
+  a.click("consent");
+  assert.equal(a.doc.querySelector(".app-shell").dataset.page, "home");
+  a.close();
+});
+
+test("creative choices give specific closing feedback immediately and after save in both languages", () => {
+  for (const lang of ["en", "hi"])
+    for (const [kind, id] of [
+      ["story", "ravi"],
+      ["song", "calm"],
+      ["poem", "hope"],
+    ]) {
+      const a = app({ consent: true, lang, entries: [] });
+      a.click("explore");
+      a.click("research-" + kind);
+      a.click(kind);
+      assert.equal(a.doc.querySelector(".choice-conclusion"), null);
+      a.click(`creative-choice:${kind}:${id}`);
+      assert.ok(a.doc.querySelector(".choice-conclusion li"));
+      a.click("reflect:" + kind);
+      assert.equal(
+        a.doc.querySelector(".app-shell").dataset.page,
+        "experience",
+      );
+      assert.ok(a.doc.querySelector(".choice-conclusion li"));
+      assert.equal(a.data().experiences.at(-1).optionIds[0], id);
+      assert.match(
+        a.doc.querySelector(".choice-conclusion").textContent,
+        lang === "en"
+          ? /not AI analysis, diagnosis or treatment/
+          : /निदान या उपचार नहीं/,
+      );
+      a.close();
+    }
+});
+
+test("three optional journal MCQs recover drafts, preserve primary choices, toggle exclusively and save feedback", () => {
+  const a = app({ consent: true, lang: "en", entries: [] });
+  a.click("journal");
+  for (const q of journal.journalFollowUps)
+    assert.match(
+      a.doc.body.textContent,
+      new RegExp(q.en.replace(/[?]/g, "\\?")),
+    );
+  a.click("journal-choice:good");
+  a.click("journal-followup:thought:must");
+  a.click("journal-followup:thought:compare");
+  assert.deepEqual(a.data().journalChoices.followUps.thought, [
+    "must",
+    "compare",
+  ]);
+  a.click("journal-followup:thought:unsure");
+  assert.deepEqual(a.data().journalChoices.followUps.thought, ["unsure"]);
+  a.click("journal-followup:thought:balanced");
+  assert.deepEqual(a.data().journalChoices.followUps.thought, ["balanced"]);
+  a.click("journal-followup:perspective:friend");
+  a.click("journal-followup:step:connect");
+  a.click("journal-choice:mixed");
+  assert.deepEqual(a.data().journalChoices.followUps.step, ["connect"]);
+  const draft = a.data();
+  const reloaded = app(draft);
+  reloaded.click("journal");
+  assert.equal(
+    reloaded.doc
+      .querySelector('[data-action="journal-followup:step:connect"]')
+      .getAttribute("aria-pressed"),
+    "true",
+  );
+  reloaded.close();
+  a.click("language");
+  assert.match(a.doc.querySelector(".choice-conclusion").textContent, /चिंतन/);
+  a.click("save");
+  const entry = a.data().entries[0];
+  assert.deepEqual(entry.followUps, {
+    thought: ["balanced"],
+    perspective: ["friend"],
+    step: ["connect"],
+  });
+  assert.deepEqual(entry.optionIds, ["mixed"]);
+  assert.ok(a.doc.querySelector(".choice-conclusion"));
+  a.click("journal");
+  assert.equal(
+    a.doc
+      .querySelector('[data-action="journal-followup:step:connect"]')
+      .getAttribute("aria-pressed"),
+    "true",
+  );
+  a.close();
+});
+
+test("follow-up-only journal answers save without typing and storage errors roll choices back", () => {
+  const a = app({ consent: true, lang: "en", entries: [] });
+  a.click("journal");
+  a.click("journal-followup:step:pause");
+  a.click("save");
+  assert.deepEqual(a.data().entries[0].optionIds, []);
+  assert.deepEqual(a.data().entries[0].followUps.step, ["pause"]);
+  a.click("journal");
+  let message = "";
+  a.w.alert = (m) => {
+    message = m;
+  };
+  a.w.Storage.prototype.setItem = () => {
+    throw Error("full");
+  };
+  a.click("journal-followup:step:task");
+  assert.match(message, /Could not save/);
+  assert.equal(
+    a.doc
+      .querySelector('[data-action="journal-followup:step:task"]')
+      .getAttribute("aria-pressed"),
+    "false",
+  );
+  a.close();
+});
+
+test("weekly conclusion uses chosen steps across the week, with legacy-safe fallback", () => {
+  for (const extra of [false, true]) {
+    const a = app({
+      consent: true,
+      lang: "en",
+      entries: Array.from({ length: 7 }, (_, i) => ({
+        date: `2000-01-0${i + 1}`,
+        text: "A quiet moment",
+        ...(extra
+          ? {
+              day: i + 1,
+              questionVersion: 1,
+              optionIds: [],
+              followUps: { step: [i % 2 ? "connect" : "pause"] },
+            }
+          : {}),
+      })),
+    });
+    a.click("reflection");
+    assert.match(a.doc.body.textContent, /Your seven-day conclusion/);
+    assert.match(a.doc.body.textContent, /not proof of improvement/);
+    if (extra) {
+      assert.match(
+        a.doc.querySelector(".choice-conclusion").textContent,
+        /short pause/,
+      );
+      assert.match(
+        a.doc.querySelector(".choice-conclusion").textContent,
+        /someone I trust/,
+      );
+    }
+    a.close();
+  }
+});
+
+test("support selections never produce an ordinary closing conclusion on return to journal or Home", () => {
+  const a = app({
+    consent: true,
+    lang: "en",
+    entries: Array.from({ length: 4 }, (_, i) => ({
+      date: `2000-01-0${i + 1}`,
+      text: "Earlier",
+    })),
+  });
+  a.click("journal");
+  a.click("journal-followup:step:connect");
+  a.click("journal-choice:disappear");
+  assert.equal(a.doc.querySelector(".app-shell").dataset.page, "crisis");
+  assert.ok(a.doc.querySelector('a[href="tel:14416"]'));
+  a.click("back");
+  assert.equal(a.doc.querySelector(".choice-conclusion"), null);
+  a.click("save");
+  assert.equal(a.doc.querySelector(".app-shell").dataset.page, "crisis");
+  assert.deepEqual(a.data().entries.at(-1).followUps.step, ["connect"]);
+  a.click("home-root");
+  assert.equal(a.doc.querySelector(".choice-conclusion"), null);
+  a.close();
+});
+
+test("trusted number persists across reload, is available to call and only changes after explicit save", () => {
+  const a = app({ consent: true, lang: "en", entries: [] });
+  a.click("settings");
+  a.doc.querySelector("#phone").value = "+91 (98765) 43210";
+  a.click("contact");
+  assert.equal(a.data().phone, "+919876543210");
+  assert.equal(
+    a.doc.querySelector(".saved-contact a").getAttribute("href"),
+    "tel:+919876543210",
+  );
+  assert.match(
+    a.doc.querySelector(".saved-contact").textContent,
+    /Saved on this device/,
+  );
+  const b = app(a.data());
+  b.click("settings");
+  assert.equal(b.doc.querySelector("#phone").value, "+919876543210");
+  b.doc.querySelector("#phone").value = "+918888888888";
+  b.doc.querySelector("#phone").dispatchEvent(new b.w.Event("input"));
+  b.click("cancel-contact");
+  assert.equal(b.doc.querySelector("#phone").value, "+919876543210");
+  b.click("panic");
+  assert.ok(b.doc.querySelector('a[href="tel:+919876543210"]'));
+  b.click("crisis");
+  assert.ok(b.doc.querySelector('a[href="tel:+919876543210"]'));
+  a.close();
+  b.close();
+});
+
+test("contact rejects malformed short numbers, reports failed storage, and confirms removal", () => {
+  const a = app({
+    consent: true,
+    lang: "en",
+    entries: [],
+    phone: "+919876543210",
+  });
+  a.click("settings");
+  for (const value of [
+    "-----",
+    "12345",
+    "+123+456789",
+    "+1234567890123456",
+    "javascript:alert(1)",
+    "",
+  ]) {
+    a.doc.querySelector("#phone").value = value;
+    a.click("contact");
+    assert.equal(a.data().phone, "+919876543210");
+    assert.equal(
+      a.doc.querySelector("#phone").getAttribute("aria-invalid"),
+      "true",
+    );
+  }
+  a.w.confirm = () => false;
+  a.click("remove-contact");
+  assert.equal(a.data().phone, "+919876543210");
+  a.w.confirm = () => true;
+  a.click("remove-contact");
+  assert.equal(a.data().phone, "");
+  assert.equal(a.doc.querySelector(".saved-contact"), null);
+  a.doc.querySelector("#phone").value = "+919876543210";
+  a.click("contact");
+  a.w.Storage.prototype.setItem = () => {
+    throw Error("full");
+  };
+  a.doc.querySelector("#phone").value = "+918888888888";
+  a.click("contact");
+  assert.match(
+    a.doc.querySelector("#status").textContent,
+    /previous number is unchanged/,
+  );
+  assert.equal(a.w.__notebookTest().phone, "+919876543210");
+  a.click("remove-contact");
+  assert.equal(a.w.__notebookTest().phone, "+919876543210");
+  a.close();
+});
+
+test("trusted contact is isolated per account and does not upload automatically", async () => {
+  const sdk = fakeSupabase(),
+    a = app(
+      { consent: true, lang: "en", entries: [], phone: "+919876543210" },
+      sdk,
+    );
+  await signIn(a);
+  a.click("account-guest");
+  if (a.doc.querySelector('[data-action="consent"]')) a.click("consent");
+  a.click("settings");
+  assert.equal(a.doc.querySelector(".saved-contact"), null);
+  a.doc.querySelector("#phone").value = "+918888888888";
+  a.click("contact");
+  assert.equal(a.w.__notebookTest().phone, "+918888888888");
+  assert.equal(sdk.getRow(), null);
+  a.click("account");
+  a.click("signout");
+  await settle(a);
+  a.click("settings");
+  assert.equal(a.doc.querySelector("#phone").value, "+919876543210");
+  a.close();
+});
+
+test("subtle route motion is navigation-only and never added to crisis or Calm", () => {
+  const a = app({ consent: true, lang: "en", entries: [] });
+  a.click("journal");
+  assert.ok(a.doc.querySelector("#screen.route-enter"));
+  a.click("journal-choice:okay");
+  assert.equal(a.doc.querySelector("#screen.route-enter"), null);
+  a.click("panic");
+  assert.equal(a.doc.querySelector("#screen.route-enter"), null);
+  a.click("crisis");
+  assert.equal(a.doc.querySelector("#screen.route-enter"), null);
+  a.close();
+});
+
+test("Google progress is accessible, prevents duplicate requests and survives a language rerender", async () => {
+  const a = app({ consent: true, lang: "en", entries: [] }, fakeSupabase());
+  let complete;
+  a.w.__googleWait = new Promise((resolve) => (complete = resolve));
+  a.w.eval("go('login')");
+  a.doc.querySelector("#google-consent").checked = true;
+  a.click("google-signin");
+  assert.equal(a.w.__googleCalls, 1);
+  assert.equal(
+    a.doc.querySelector('[data-action="google-signin"]').disabled,
+    true,
+  );
+  assert.equal(
+    a.doc
+      .querySelector('[data-action="google-signin"]')
+      .getAttribute("aria-busy"),
+    "true",
+  );
+  assert.match(
+    a.doc.querySelector("[data-google-label]").textContent,
+    /Please wait/,
+  );
+  a.click("google-signin");
+  assert.equal(a.w.__googleCalls, 1);
+  a.click("language");
+  assert.equal(
+    a.doc.querySelector('[data-action="google-signin"]').disabled,
+    true,
+  );
+  assert.match(
+    a.doc.querySelector("[data-google-label]").textContent,
+    /प्रतीक्षा/,
+  );
+  complete();
+  await settle(a);
+  assert.equal(
+    a.doc.querySelector('[data-action="google-signin"]').disabled,
+    false,
+  );
+  assert.equal(
+    a.doc
+      .querySelector('[data-action="google-signin"]')
+      .getAttribute("aria-busy"),
+    null,
+  );
+  a.close();
+});
+
+test("Google completion never overwrites crisis support with an authentication status", async () => {
+  const a = app({ consent: true, lang: "en", entries: [] }, fakeSupabase());
+  let complete;
+  a.w.__googleWait = new Promise((resolve) => (complete = resolve));
+  a.w.eval("go('login')");
+  a.doc.querySelector("#google-consent").checked = true;
+  a.click("google-signin");
+  a.click("crisis");
+  complete();
+  await settle(a);
+  assert.equal(a.doc.querySelector(".app-shell").dataset.page, "crisis");
+  assert.equal(a.doc.querySelector("#global-status").textContent, "");
+  assert.ok(a.doc.querySelector('a[href="tel:14416"]'));
+  a.close();
+});
+
+test("temporary Google settings failures show connection guidance rather than claiming provider is disabled", async () => {
+  const a = app({ consent: true, lang: "en", entries: [] }, fakeSupabase());
+  a.w.eval("go('login')");
+  a.doc.querySelector("#google-consent").checked = true;
+  a.w.__googleError = { code: "google_settings_unavailable" };
+  a.click("google-signin");
+  await settle(a);
+  assert.match(
+    a.doc.querySelector("#account-status").textContent,
+    /Check your connection/,
+  );
+  assert.doesNotMatch(
+    a.doc.querySelector("#account-status").textContent,
+    /owner must configure/,
+  );
+  a.close();
+});
+
+test("trusted contact clearly distinguishes unsaved edits, navigation recovery and persisted values", () => {
+  const a = app({
+    consent: true,
+    lang: "en",
+    entries: [],
+    phone: "+12025550123",
+  });
+  a.click("settings");
+  const input = a.doc.querySelector("#phone");
+  input.value = "+12025550124";
+  input.dispatchEvent(new a.w.Event("input"));
+  assert.match(a.doc.querySelector(".contact-badge").textContent, /Unsaved/);
+  assert.match(a.doc.querySelector("#status").textContent, /not saved yet/);
+  assert.equal(a.data().phone, "+12025550123");
+  a.click("crisis");
+  assert.ok(a.doc.querySelector('a[href="tel:+12025550123"]'));
+  a.click("back");
+  assert.match(a.doc.querySelector(".contact-badge").textContent, /Unsaved/);
+  a.click("cancel-contact");
+  assert.match(a.doc.querySelector(".contact-badge").textContent, /Saved/);
+  assert.equal(a.doc.querySelector("#phone").value, "+12025550123");
+  a.doc.querySelector("#phone").value = "+12025550124";
+  a.click("contact");
+  assert.equal(a.data().phone, "+12025550124");
+  assert.match(a.doc.querySelector(".contact-badge").textContent, /Saved/);
   a.close();
 });

@@ -1,5 +1,6 @@
 import { renderResearch } from "./research.js";
 import {
+  renderConclusion,
   hasJournalSafetyChoice,
   creativeOptions,
   choiceButtons,
@@ -350,6 +351,14 @@ export function renderExtra(page, c) {
         c,
         `creative-choice:${page}`,
       ) +
+      (riskSignal(s.featureDrafts?.[page] || "")
+        ? ""
+        : renderConclusion(
+            page,
+            s.featureChoices?.[page] || [],
+            c,
+            creativeOptions[page],
+          )) +
       draft(
         c,
         page,
@@ -367,7 +376,7 @@ export function renderExtra(page, c) {
     if (!x)
       return `<h1>${t("Choose a saved reflection", "सेव किया चिंतन चुनें")}</h1>${b(t("View saved reflections", "सेव किए चिंतन देखें"), "history", "primary")}`;
     if (riskSignal(x.text)) return safetyCard(c);
-    return `<h1>${x.text ? t("Your words, reflected gently", "आपके शब्दों पर हल्का चिंतन") : t("Your choices, kept together.", "आपके चुनाव, एक जगह।")}</h1><small>${e(x.type)} · ${e(x.date)}</small>${x.type === "song" ? `<p>${e(x.songTitle || "")}</p>` : ""}<div class="card"><p style="white-space:pre-wrap">${e(x.text)}</p>${x.optionIds?.length ? `<p>${e(labelsFor(x.optionIds, creativeOptions[x.type] || [], s.lang).join(" · "))}</p>` : ""}</div>${x.text ? reflectionCard(c, x.text, x.id) : `<p class="notice">${t("Your choices are saved as chosen, without interpreting your mental health. No written note was added.", "आपके चुनाव वैसे ही सेव हैं; उनसे मानसिक स्वास्थ्य का अनुमान नहीं लगाया गया। कोई लिखित नोट नहीं जोड़ा गया।")}</p>`}${b(t("Explore something else", "कुछ और आज़माएँ"), "explore", "quiet")}`;
+    return `<h1>${x.text ? t("Your words, reflected gently", "आपके शब्दों पर हल्का चिंतन") : t("Your choices, kept together.", "आपके चुनाव, एक जगह।")}</h1><small>${e(x.type)} · ${e(x.date)}</small>${x.type === "song" ? `<p>${e(x.songTitle || "")}</p>` : ""}<div class="card"><p style="white-space:pre-wrap">${e(x.text)}</p>${x.optionIds?.length ? `<p>${e(labelsFor(x.optionIds, creativeOptions[x.type] || [], s.lang).join(" · "))}</p>` : ""}</div>${renderConclusion(x.type, x.optionIds || [], c, creativeOptions[x.type] || [])}${x.text ? reflectionCard(c, x.text, x.id) : `<p class="notice">${t("Your choices are saved as chosen, without interpreting your mental health. No written note was added.", "आपके चुनाव वैसे ही सेव हैं; उनसे मानसिक स्वास्थ्य का अनुमान नहीं लगाया गया। कोई लिखित नोट नहीं जोड़ा गया।")}</p>`}${b(t("Explore something else", "कुछ और आज़माएँ"), "explore", "quiet")}`;
   }
   if (page === "history")
     return `<h1>${t("Your reflection shelf", "आपके चिंतन")}</h1><p>${t("Saved on this device. Cloud copies update only when you explicitly back up.", "इस डिवाइस पर सेव है। क्लाउड कॉपी केवल आपके बैकअप बनाने पर बदलती है।")}</p>${

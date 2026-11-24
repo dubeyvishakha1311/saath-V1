@@ -1,3 +1,5 @@
+import { createHash, randomBytes } from "node:crypto";
+import { validateGoogleOAuthRedirect } from "./google-oauth-redirect.mjs";
 // Read-only live smoke test. No accounts, emails, secrets or notebook writes.
 import config from "../src/supabase-config.json" with { type: "json" };
 import assert from "node:assert/strict";
@@ -25,6 +27,33 @@ try {
       "::error::Google sign-in is not enabled in this configured project's public Auth settings. No provider configuration was changed.",
     );
     assert.equal(auth.external?.google, true, "Google sign-in must be enabled");
+  }
+  if (process.argv.includes("--require-google")) {
+    const authorize = new URL(`${config.url}/auth/v1/authorize`);
+    authorize.searchParams.set("provider", "google");
+    authorize.searchParams.set(
+      "redirect_to",
+      "in.saath.wellness://auth/callback",
+    );
+    authorize.searchParams.set(
+      "code_challenge",
+      createHash("sha256").update(randomBytes(32)).digest("base64url"),
+    );
+    authorize.searchParams.set("code_challenge_method", "s256");
+    const handshake = await fetch(authorize, {
+      headers,
+      redirect: "manual",
+      cache: "no-store",
+      signal: AbortSignal.timeout(15000),
+    });
+    assert.ok(
+      [302, 303].includes(handshake.status),
+      "Supabase must initiate Google authorization",
+    );
+    validateGoogleOAuthRedirect(handshake.headers.get("location"), config.url);
+    console.log(
+      "::notice::Google authorization preflight passed: trusted Google destination, correct Supabase callback, code flow and basic identity scopes. Google consent/audience/verification and real-account completion are NOT verified. No redirect followed or session created.",
+    );
   }
   const denied = await fetch(
     `${config.url}/rest/v1/saath_vaults?select=user_id&limit=1`,

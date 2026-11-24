@@ -1,3 +1,9 @@
+import { journalFollowUps } from "./reflection-choices.js";
+export {
+  journalFollowUps,
+  validFollowUps,
+  renderConclusion,
+} from "./reflection-choices.js";
 // Choice wording and the explicit Day 5 safety rule await psychologist and
 // native-speaker review. These are reflection prompts, not a validated scale.
 const option = (id, en, hi, exclusive = false) => ({ id, en, hi, exclusive });
@@ -179,6 +185,15 @@ export function journalSummary(entry, index, lang = "en") {
       entry.optionIds,
       dailyQuestions[(entry.day || index + 1) - 1]?.options || [],
       lang,
+    ),
+    ...journalFollowUps.flatMap((q) =>
+      entry.followUps?.[q.id]?.length
+        ? [
+            q[lang === "hi" ? "hi" : "en"] +
+              ": " +
+              labelsFor(entry.followUps[q.id], q.options, lang).join(" · "),
+          ]
+        : [],
     ),
     entry.text || "",
   ]

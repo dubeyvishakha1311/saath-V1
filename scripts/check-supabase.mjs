@@ -12,6 +12,11 @@ const settings = await fetch(`${config.url}/auth/v1/settings`, {
 assert.equal(settings.ok, true, "Supabase Auth must be reachable");
 const auth = await settings.json();
 assert.equal(auth.external?.email, true, "Email auth must be enabled");
+console.log(
+  `Public Auth settings: Google enabled=${auth.external?.google === true}; email enabled=${auth.external?.email === true}. No OAuth token or user data requested.`,
+);
+if (process.argv.includes("--require-google"))
+  assert.equal(auth.external?.google, true, "Google sign-in must be enabled");
 const denied = await fetch(
   `${config.url}/rest/v1/saath_vaults?select=user_id&limit=1`,
   { headers, signal: AbortSignal.timeout(15000) },

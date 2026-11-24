@@ -1,7 +1,7 @@
 name: Build Android APK
 on:
   push:
-    branches: [main, arena/b996647d-saath-v1]
+    branches: [main, 'arena/**']
   workflow_dispatch:
     inputs:
       publish_new_apk:
@@ -32,7 +32,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - name: Read-only Supabase connection and anonymous-access smoke test
-        run: npm run check:supabase
+        run: npm run check:supabase -- --require-google
       - run: npm run android:sync
       - name: Compile debug APK
         working-directory: android

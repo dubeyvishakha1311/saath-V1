@@ -352,3 +352,27 @@ test("packager creates signed manifest and native-compatible RSA/AES/SHA256 bund
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("push publisher stays disabled until public trust pins and explicit bootstrap readiness are both present", async () => {
+  const { otaReady } = await import("../scripts/ota-readiness.mjs");
+  const pins = {
+    nativeFingerprint: "a".repeat(64),
+    publicKeySpki: "-----BEGIN PUBLIC KEY-----\nTEST\n-----END PUBLIC KEY-----",
+  };
+  assert.equal(otaReady({}, "true"), false);
+  assert.equal(otaReady(pins, undefined), false);
+  assert.equal(otaReady(pins, "false"), false);
+  assert.equal(otaReady(pins, "TRUE"), false);
+  assert.equal(otaReady({ ...pins, nativeFingerprint: "" }, "true"), false);
+  assert.equal(otaReady({ ...pins, publicKeySpki: "" }, "true"), false);
+  assert.equal(otaReady(pins, "true"), true); // Packaging still independently verifies actual keys.
+  const current = JSON.parse(readFileSync("src/ota-config.json", "utf8"));
+  assert.equal(otaReady(current, undefined), false);
+  const workflow = readFileSync(
+    ".github/workflows/publish-web-update.yml",
+    "utf8",
+  );
+  assert.match(workflow, /push:\s+branches: \[main\]/);
+  assert.match(workflow, /SAATH_OTA_BOOTSTRAP_READY/);
+  assert.match(workflow, /ota-production/);
+});

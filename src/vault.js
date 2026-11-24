@@ -1,4 +1,9 @@
-import { dailyQuestions, creativeOptions, validOptionIds } from "./journal.js";
+import {
+  dailyQuestions,
+  creativeOptions,
+  validOptionIds,
+  validFollowUps,
+} from "./journal.js";
 export const KDF_ITERATIONS = 600000;
 export const CLOUD_CONSENT = "cloud-backup-v1";
 const MAX_BYTES = 2 * 1024 * 1024;
@@ -57,6 +62,15 @@ export function notebookSnapshot(value) {
       dailyQuestions[x.day - 1].options,
       !!dailyQuestions[x.day - 1].single,
     );
+  for (const item of [
+    ...data.entries,
+    ...(data.journalChoices ? [data.journalChoices] : []),
+  ])
+    if (
+      item?.followUps !== undefined &&
+      !validFollowUps(item.followUps, validOptionIds)
+    )
+      fail();
   for (const entry of data.entries)
     if (
       entry.optionIds !== undefined &&

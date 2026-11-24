@@ -1,15 +1,40 @@
 name: Publish signed web update
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: saath-ota-stable
   cancel-in-progress: false
 jobs:
+  readiness:
+    runs-on: ubuntu-24.04
+    outputs:
+      configured: ${{ steps.pins.outputs.configured }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check public trust configuration without generating keys
+        id: pins
+        shell: bash
+        env:
+          BOOTSTRAP_READY: ${{ vars.SAATH_OTA_BOOTSTRAP_READY }}
+        run: |
+          set -euo pipefail
+          READY=$(node scripts/ota-readiness.mjs)
+          echo "configured=$READY" >> "$GITHUB_OUTPUT"
+          if [ "$READY" != true ]; then
+            echo "::notice::OTA NOT ACTIVATED. No update will be published. Owner signing-key provisioning, a configured bootstrap APK and device testing are required."
+            echo "### OTA delivery is disabled" >> "$GITHUB_STEP_SUMMARY"
+            echo "No update was published. Follow docs/OTA_UPDATES.md. Existing unconfigured APKs cannot gain trust pins remotely." >> "$GITHUB_STEP_SUMMARY"
+          fi
   publish:
-    if: github.ref == 'refs/heads/main'
+    needs: readiness
+    if: github.ref == 'refs/heads/main' && needs.readiness.outputs.configured == 'true'
     environment: ota-production
+    permissions:
+      contents: write
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:

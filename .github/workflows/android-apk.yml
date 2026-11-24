@@ -32,7 +32,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - name: Read-only Supabase connection and anonymous-access smoke test
-        run: npm run check:supabase -- --require-google
+        run: npm run check:supabase
       - run: npm run android:sync
       - name: Compile debug APK
         working-directory: android
@@ -68,8 +68,21 @@ jobs:
           sha256sum apk/Saath-0.7.0-debug.apk
           gh release create saath-v0.7.0-debug apk/Saath-0.7.0-debug.apk --target 7cb0541daf443b6a119a8a3ee7746f2c5d7ee1a5 --title "Saath v0.7.0 — Android debug build" --prerelease --notes "Standalone APK from successful Android build 42841924270, unchanged and not rebuilt. Debug/testing build, not production approved. Back up notebooks before installing; do not uninstall an existing app to resolve a signing conflict without a verified backup. OTA delivery remains disabled pending signing-key activation."
 
+  google-readiness:
+    if: ${{ !inputs.publish_existing_apk }}
+    name: Google provider readiness
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Require Google enabled in the configured project
+        run: node scripts/check-supabase.mjs --require-google
+
   publish-new-apk:
-    needs: build
+    needs: [build, google-readiness]
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_new_apk && !inputs.publish_existing_apk }}
     runs-on: ubuntu-24.04
     permissions:
